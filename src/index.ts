@@ -1,11 +1,16 @@
 import { handleApi } from "./api";
 import { runTick } from "./scraper/tick";
+import { defaultMeta, shareMeta, withShareTags } from "./share";
 
 export default {
   async fetch(request, env): Promise<Response> {
     const url = new URL(request.url);
     if (url.pathname.startsWith("/api/")) return handleApi(request, env, url);
-    return env.ASSETS.fetch(request);
+    const page = await env.ASSETS.fetch(request);
+    if (url.pathname !== "/" || !page.headers.get("content-type")?.startsWith("text/html")) return page;
+    // A failed lookup must never break the page; fall back to the generic preview.
+    const meta = await shareMeta(env.DB, url).catch(() => defaultMeta(url));
+    return withShareTags(page, meta);
   },
 
   async scheduled(_controller, env, ctx): Promise<void> {

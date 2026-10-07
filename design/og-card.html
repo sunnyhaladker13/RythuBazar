@@ -1,0 +1,32 @@
+<!doctype html>
+<!-- Source of public/og.jpg (the WhatsApp/social link preview). Re-render with design/render-og.mjs.
+     WhatsApp shows it at roughly a third of this size, so nothing here is smaller than ~32px. -->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Anek+Telugu:wght@400..700&display=swap" />
+<style>
+  body { margin: 0; }
+  .card {
+    width: 1200px; height: 630px; display: flex; flex-direction: column; overflow: hidden;
+    background: #ffd931; color: #231f20; font-family: "Archivo", "Arial Narrow", sans-serif;
+  }
+  .head { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 24px 40px 12px; text-align: center; }
+  h1 { margin: 0; font-size: 182px; line-height: 0.84; font-weight: 900; font-stretch: 75%; letter-spacing: -0.01em; text-transform: uppercase; }
+  .te { margin: 0; font-family: "Anek Telugu", "Noto Sans Telugu", sans-serif; font-size: 66px; font-weight: 600; line-height: 1.1; }
+  .band {
+    height: 104px; padding: 0 48px; display: flex; justify-content: space-between; align-items: center;
+    background: #231f20; color: #ffd931; font-size: 34px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="head">
+    <h1>Rythu Bazar<br />rates today</h1>
+    <p class="te">ఈరోజు రైతు బజార్ రేట్లు</p>
+  </div>
+  <div class="band"><span>Telangana</span><span>Updated through the day</span></div>
+</div>
+</body>
+</html>

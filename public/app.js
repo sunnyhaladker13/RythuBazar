@@ -192,7 +192,7 @@ async function showAll() {
   els.bazarChip.lastElementChild.style.display = "";
   els.title.textContent = "Today's rates";
   els.sub.textContent = "Typical prices across Telangana's Rythu Bazars";
-  document.title = "Rythu Bazar Prices";
+  document.title = "Rythu Bazar rates today";
   setFresh("Loading rates…");
   resetView();
 
@@ -260,7 +260,7 @@ async function showMarket(id) {
   state.market = data.market;
   state.current = data;
   const { date, isToday, market, items } = data;
-  document.title = `${market.name} · Rythu Bazar Prices`;
+  document.title = `${market.name} · Rythu Bazar rates today`;
   const checked = market.lastCheckedAt ? ` · checked ${timeFmt.format(new Date(market.lastCheckedAt))}` : "";
   els.sub.textContent = `${market.district}${items.length ? ` · ${plural(items.length, "item")}` : ""}`;
 
