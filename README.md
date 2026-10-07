@@ -57,12 +57,14 @@ npm test && npm run typecheck
 | Endpoint | Returns |
 |---|---|
 | `GET /api/markets` | Districts → markets, with `lastReportedDate` |
-| `GET /api/prices?market=<id>` | The market's latest price table, plus `isToday` |
+| `GET /api/overview` | All markets at once: each item's min / max / median across markets' latest tables, and where it's cheapest (the home page) |
+| `GET /api/prices?market=<id>` | The market's latest price table, plus `isToday` and each item's cross-market `stats` |
 | `GET /api/item?name=<item>` | One item across markets (each market's latest date within 3 days), cheapest first |
 | `GET /api/status` | Coverage today and the last 20 scrape runs |
 
 ## Things to watch after the first deploy
 
-- **Upstream reachability:** `183.82.5.184` might block non-Indian or datacenter IPs. Check `/api/status` after the first ticks. If every run shows `fatal: … timed out`, that's the cause.
+- **Upstream reachability:** verified 2026-10-07 — rbzts answers requests from Cloudflare. If every run in `/api/status` starts showing `fatal: … timed out`, it has started blocking.
+- **D1 reads:** "latest table per market" comes from `markets.last_reported_date`, not `MAX(date)` over `prices`, so page views don't scan the whole history. Keep it that way; check `meta.rows_read` with `wrangler d1 execute --remote --json` when changing queries.
 - **CPU time:** Workers dashboard → Observability shows CPU per invocation. If ticks get close to 10 ms, lower `FETCH_BUDGET`.
 - **sslip.io dependency:** if you own a domain on Cloudflare, add a DNS-only A record (e.g. `rbz-origin.example.com → 183.82.5.184`) and point `RBZ_ORIGIN` at it.
