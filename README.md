@@ -2,8 +2,42 @@
 
 Today's vegetable rates at Telangana Rythu Bazars, in one place. It runs entirely on Cloudflare's free plan.
 
-- **Source:** Telangana Rythu Bazar Information System (`183.82.5.184/rbzts`). There's no API, so we scrape it. See [RESEARCH.md](RESEARCH.md).
+**Live:** https://rythu-bazar.sunnyhaladker.workers.dev
+
+- **Source:** Telangana Rythu Bazar Information System (`183.82.5.184/rbzts`), run by the Agricultural Marketing Dept. Each bazar's staff enter that day's rates by about 1 PM. There's no API, so we scrape it. See [RESEARCH.md](RESEARCH.md).
 - **Stack:** one Cloudflare Worker. It serves the static site (`public/`), the JSON API (`src/api.ts`) and the scraper (cron, `src/scraper/`), and stores everything in **D1** (SQLite).
+- **Coverage:** Telangana only (40 bazars). Andhra Pradesh's equivalent portal is down; see RESEARCH.md → Andhra Pradesh.
+
+## How it works
+
+```
+rbzts (ASP.NET page, no API)
+   │  every 5 min, 07:30–16:25 IST: Worker cron scrapes only what's due (src/scraper/)
+   ▼
+D1: districts → markets → prices (one row per market / day / item, history kept)
+   │  JSON API (src/api.ts)
+   ▼
+Static site (public/): all-bazar overview by default, one bazar via ?market=<id>
+```
+
+1. **Scrape.** The cron Worker posts the rbzts dropdowns (district → market) and parses each market's price table. Prices fill in through the morning, so markets are re-checked until they report.
+2. **Store.** Each market's table is saved per IST date. A row is written only when a price changes, and history is never pruned. Price history starts 7 Oct 2026; rbzts has no older data.
+3. **Serve.** The home page shows every item across all bazars: typical (median) price, range, and where it's cheapest. Picking a bazar ("Choose a branch") shows that bazar's own table.
+4. **Share.** Links get a preview card on WhatsApp and social media, and bazar links are titled after their bazar (see below).
+
+## Project layout
+
+| Path | What |
+|---|---|
+| `src/index.ts` | Worker entry: routes `/api/*`, adds share tags to `/`, runs the cron |
+| `src/scraper/` | `rbzts.ts` (fetch and parse), `plan.ts` (what's due this tick), `tick.ts` (one run) |
+| `src/api.ts` | JSON endpoints (below) |
+| `src/share.ts` | Open Graph tags per request |
+| `public/` | The site: `index.html`, `app.js`, `styles.css`, `og.jpg` |
+| `design/` | Share-card source (`og-card.html`) and its renderer |
+| `migrations/` | D1 schema |
+| `research/` | The original Python scraper prototype |
+| `test/` | Vitest tests; rbzts HTML fixtures in `test/fixtures/` |
 
 ## How the scraper fits the free plan
 
@@ -61,6 +95,20 @@ npm test && npm run typecheck
 | `GET /api/prices?market=<id>` | The market's latest price table, plus `isToday` and each item's cross-market `stats` |
 | `GET /api/item?name=<item>` | One item across markets (each market's latest date within 3 days), cheapest first |
 | `GET /api/status` | Coverage today and the last 20 scrape runs |
+
+## Link previews (WhatsApp, social)
+
+- `public/index.html` carries Open Graph tags. Because `run_worker_first: ["/"]` is set in `wrangler.jsonc`, the Worker handles `/` before the static file is served. `src/share.ts` then fills in absolute URLs for whatever domain serves the page, and titles `?market=` links after their bazar. A `?market=` link costs one 2-row D1 lookup.
+- Untidy rbzts names get a place first: "Opp: Municipal Office" in Adilabad becomes "Adilabad Rythu Bazar (Opp: Municipal Office)". See `bazarLabel`.
+- The card is `public/og.jpg`, 1200×630. Keep it under ~300 KB, or WhatsApp may show a small preview or none. WhatsApp shows it at about a third of its size, so keep text large. To change it:
+
+  ```sh
+  # edit design/og-card.html, then:
+  PLAYWRIGHT=/path/to/node_modules/playwright node design/render-og.mjs
+  sips -s format jpeg -s formatOptions 85 public/og.png --out public/og.jpg && rm public/og.png
+  ```
+
+  Then bump `?v=` in `OG_IMAGE` (`src/share.ts`) and `public/index.html`. WhatsApp caches previews per image URL.
 
 ## Things to watch after the first deploy
 
