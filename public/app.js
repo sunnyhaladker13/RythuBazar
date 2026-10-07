@@ -12,9 +12,8 @@ const els = {
   board: $("board"),
   controls: $("controls"),
   search: $("search"),
-  scope: $("scope"),
-  scopeValue: $("scope-value"),
-  scopeAction: $("scope-action"),
+  bazarChip: $("bazar-chip"),
+  bazarChipLabel: $("bazar-chip-label"),
   dealsChip: document.querySelector('[data-sort="deals"]'),
   notice: $("notice"),
   prices: $("prices"),
@@ -133,8 +132,9 @@ async function init() {
 
   els.search.addEventListener("input", render);
   els.mkSearch.addEventListener("input", renderMarkets);
-  els.scope.addEventListener("click", openMarkets);
-  els.scope.disabled = !state.all.length;
+  // Overview: opens the branch list. One branch: goes straight back to all branches.
+  els.bazarChip.addEventListener("click", () => (state.market ? go(null) : openMarkets()));
+  els.bazarChip.disabled = !state.all.length;
   els.back.addEventListener("click", () => go(null));
   for (const chip of document.querySelectorAll("[data-sort]")) {
     chip.addEventListener("click", () => {
@@ -188,9 +188,10 @@ async function showAll() {
   els.back.hidden = true;
   els.dealsChip.hidden = true;
   if (state.sort === "deals") state.sort = "az";
+  els.bazarChipLabel.textContent = "Choose a branch";
+  els.bazarChip.lastElementChild.style.display = "";
   els.title.textContent = "Today's rates";
-  els.sub.textContent = "Typical prices across all Rythu Bazars";
-  setScope(`All ${state.all.length} bazars`, "Choose a bazar");
+  els.sub.textContent = "Typical prices across Telangana's Rythu Bazars";
   document.title = "Rythu Bazar Prices";
   setFresh("Loading rates…");
   resetView();
@@ -240,9 +241,10 @@ async function showMarket(id) {
   state.market = m ?? { id: Number(id) };
   els.back.hidden = false;
   els.dealsChip.hidden = false;
+  els.bazarChipLabel.textContent = "All branches";
+  els.bazarChip.lastElementChild.style.display = "none";
   els.title.textContent = m?.name ?? "…";
   els.sub.textContent = m?.district ?? "";
-  setScope(`${m?.name ?? "One bazar"} only`, "Change");
   setFresh("Loading rates…");
   resetView();
 
@@ -653,7 +655,7 @@ function renderMarkets() {
         el(
           "span",
           { className: "what" },
-          el("span", { className: "en", textContent: "All bazars" }),
+          el("span", { className: "en", textContent: "All branches" }),
           el("span", { className: "sub", textContent: "Typical prices across Telangana" }),
         ),
       ),
@@ -671,12 +673,6 @@ function renderMarkets() {
         ].filter(Boolean)
       : [el("p", { className: "sheet-msg", textContent: `No bazar matches “${els.mkSearch.value.trim()}”.` })]),
   );
-}
-
-function setScope(value, action) {
-  els.scopeValue.textContent = value;
-  els.scopeAction.firstChild.textContent = action;
-  els.scope.ariaLabel = `Showing ${value}. ${action}`;
 }
 
 function setFresh(text, stale = false) {
