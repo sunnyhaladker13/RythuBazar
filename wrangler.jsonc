@@ -12,8 +12,7 @@
     {
       "binding": "DB",
       "database_name": "rythu-bazar",
-      // Replace with the id printed by `npx wrangler d1 create rythu-bazar`.
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "f7257157-5884-48d2-92ea-f32d64e89517",
       "migrations_dir": "migrations"
     }
   ],
