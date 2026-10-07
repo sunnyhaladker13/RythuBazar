@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Rythu Bazar Prices</title>
+    <meta name="description" content="Today's vegetable rates at Telangana Rythu Bazars, updated through the day." />
+    <meta name="theme-color" content="#1f5f3a" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥬</text></svg>" />
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <header class="top">
+      <div class="wrap">
+        <h1>Rythu Bazar Prices</h1>
+        <p class="sub" id="today">Telangana</p>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <section class="controls">
+        <label class="field">
+          <span>Market</span>
+          <select id="market" disabled>
+            <option>Loading markets…</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Search</span>
+          <input id="search" type="search" placeholder="Tomato, onion, beans…" autocomplete="off" />
+        </label>
+      </section>
+
+      <p id="status" class="status" role="status" aria-live="polite"></p>
+
+      <ul id="prices" class="prices" aria-label="Prices"></ul>
+      <p id="empty" class="empty" hidden></p>
+    </main>
+
+    <footer class="wrap foot">
+      <p>
+        Rates as published by the Telangana Agricultural Marketing Department's Rythu Bazar Information System, in ₹
+        (mostly per kg; a few items such as drumsticks may be per piece). Markets report through the morning, usually by
+        1 PM. Tap an item to compare it across markets.
+      </p>
+    </footer>
+  </body>
+</html>

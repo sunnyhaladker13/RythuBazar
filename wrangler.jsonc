@@ -1,0 +1,40 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "rythu-bazar",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "observability": { "enabled": true },
+
+  // Static site; /api/* falls through to the Worker.
+  "assets": { "directory": "./public", "binding": "ASSETS" },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "rythu-bazar",
+      // Replace with the id printed by `npx wrangler d1 create rythu-bazar`.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  // Every 5 min, 07:30–16:25 IST. Each tick does only the work that is due and
+  // fits the free-plan budget (50 subrequests, 10 ms CPU), so most ticks are no-ops.
+  "triggers": { "crons": ["*/5 2-10 * * *"] },
+
+  "vars": {
+    // Workers can't fetch() a bare IP (error 1003); sslip.io resolves this name to
+    // 183.82.5.184 and the IIS server answers any Host. Swap for your own A record if preferred.
+    "RBZ_ORIGIN": "http://183-82-5-184.sslip.io",
+    // Max outbound fetches per tick (incl. retries). D1 uses ≤ 11 more; free limit is 50.
+    "FETCH_BUDGET": "35",
+    "REQUEST_DELAY_MS": "250",
+    // Market not reported today: re-check this often.
+    "ACTIVE_INTERVAL_MIN": "30",
+    // Market already reported today: re-check for revisions this often.
+    "RECHECK_INTERVAL_MIN": "180",
+    // Re-read each district's market list (and empty districts) this often.
+    "DISCOVERY_INTERVAL_MIN": "1440"
+  }
+  // Optional secret enabling POST /api/admin/scrape: `npx wrangler secret put ADMIN_TOKEN`
+}

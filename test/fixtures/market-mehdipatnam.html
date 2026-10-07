@@ -1,0 +1,648 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head><title>
+	Telangana Rythu Bazars : Rythu Bazar Information System
+</title><link href="App_Themes/StyleSheet.css" rel="stylesheet" type="text/css" />
+
+    <script language="JavaScript">
+<!--
+// Use the following three variables 
+// to set up the message:
+var msg = "Developed by  A.Praveen Kumar (Programmer)"
+var delay = 50
+var startPos = 100
+
+// Don't touch these variables:
+var timerID = null
+var timerRunning = false
+var pos = 0
+
+// Crank it up!
+StartScrolling()
+
+function StartScrolling(){
+    // Make sure the clock is stopped
+    StopTheClock()
+
+    // Pad the message with spaces to 
+    // get the "start" position
+    for (var i = 0; i < startPos; i++) 
+        msg = " " + msg
+
+    // Off we go...
+    DoTheScroll()
+}
+
+function StopTheClock(){
+    if(timerRunning)
+        clearTimeout(timerID)
+    timerRunning = false
+}
+
+function DoTheScroll(){
+    if (pos < msg.length)
+        self.status = msg.substring(pos, msg.length);
+    else
+        pos=-1;
+    ++pos
+    timerRunning = true
+    timerID = self.setTimeout("DoTheScroll()", delay)
+}
+//-->
+    </script>
+
+    <style type="text/css">
+        .style2
+        {
+            color: #006600;
+        }
+        </style>
+
+    
+        <style type="text/css">
+            .style1
+            {
+                color: #FF3399;
+                background-color: #FFFFFF;
+            }
+        </style>
+<style type="text/css">
+	.ctl00_Menu1_0 { background-color:white;visibility:hidden;display:none;position:absolute;left:0px;top:0px; }
+	.ctl00_Menu1_1 { font-size:9pt;text-decoration:none; }
+	.ctl00_Menu1_2 { border-style:None;font-size:9pt;height:16px;width:1015px; }
+	.ctl00_Menu1_3 { color:White;font-weight:bold; }
+	.ctl00_Menu1_4 {  }
+	.ctl00_Menu1_5 { color:Black;font-weight:bold; }
+	.ctl00_Menu1_6 { color:Black;background-color:#009933;font-weight:bold; }
+
+</style></head>
+<body>
+    <form name="aspnetForm" method="post" action="/rbzts/HomePage.aspx" id="aspnetForm">
+<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="/wEPDwULLTE4OTc4MjgwMTAPFgIeB2ltYWdlbm8CARYCZg9kFgICAw9kFgQCAw88KwANAgAPFgIeC18hRGF0YUJvdW5kZ2QMFCsAAgUDMDowFCsAAhYQHgRUZXh0BQRIb21lHgVWYWx1ZQUESG9tZR4LTmF2aWdhdGVVcmwFFC9yYnp0cy9Ib21lUGFnZS5hc3B4HgdFbmFibGVkZx4KU2VsZWN0YWJsZWceCERhdGFQYXRoBRQvcmJ6dHMvaG9tZXBhZ2UuYXNweB4JRGF0YUJvdW5kZx4IU2VsZWN0ZWRnFCsACQUfMDowLDA6MSwwOjIsMDozLDA6NCwwOjUsMDo2LDA6NxQrAAIWDB8CBQ1EYWlseSBSZXBvcnRzHwMFDURhaWx5IFJlcG9ydHMfBWcfBmgfBwUkMjhlNmMwZGMtM2UzZS00NGMzLTgwOTQtMGE0NDJlMjE0YTE2HwhnFCsABgUTMDowLDA6MSwwOjIsMDozLDA6NBQrAAIWEB8CBQxEYWlseSBSZXBvcnQfAwUMRGFpbHkgUmVwb3J0HwQFFy9yYnp0cy9EYWlseVByaWNlcy5hc3B4HgdUb29sVGlwBRxEYWlseSBBcnJpdmFscyBQcmljZXMgUmVwb3J0HwVnHwZnHwcFFy9yYnp0cy9kYWlseXByaWNlcy5hc3B4HwhnZBQrAAIWEB8CBRtNaW5pbXVtLE1heGltdW0sTW9kZWwgUmF0ZXMfAwUbTWluaW11bSxNYXhpbXVtLE1vZGVsIFJhdGVzHwQFDy9yYnp0cy9tbW0uYXNweB8KBSFNaW5tdW0gTWF4aW11bSBNb2RhbCBQcmljZSBSZXBvcnQfBWcfBmcfBwUPL3JienRzL21tbS5hc3B4HwhnZBQrAAIWEB8CBRJOb3QgUmVwb3J0ZWQgUkJaJ3MfAwUSTm90IFJlcG9ydGVkIFJCWidzHwQFGy9yYnp0cy9Ob3RSZXBvcnRlZHJienMuYXNweB8KBSVOb3QgUmVwb3J0ZWQgUkJaJ3Mgb24gcGFydGljdWFsYXIgZGF5HwVnHwZnHwcFGy9yYnp0cy9ub3RyZXBvcnRlZHJienMuYXNweB8IZ2QUKwACFhAfAgURRGFpbHkgQ29tcGFyaXRpdmUfAwURRGFpbHkgQ29tcGFyaXRpdmUfBAUjL3JienRzL1NlbGVjdGRhaWx5Q29tcGZvck1vbnRoLmFzcHgfCgUOV2hvbGVTYWxlUmF0ZXMfBWcfBmcfBwUjL3JienRzL3NlbGVjdGRhaWx5Y29tcGZvcm1vbnRoLmFzcHgfCGdkFCsAAhYQHwIFE0RhaWx5IFZlZ2l0YWJsZXdpc2UfAwUTRGFpbHkgVmVnaXRhYmxld2lzZR8EBRkvcmJ6dHMvRGFpbHlDb21tV2lzZS5hc3B4HwoFDURhaWx5Q29tbVdpc2UfBWcfBmcfBwUZL3JienRzL2RhaWx5Y29tbXdpc2UuYXNweB8IZ2QUKwACFgwfAgUPTW9udGhseSBSZXBvcnRzHwMFD01vbnRobHkgUmVwb3J0cx8FZx8GaB8HBSQ5OThlMjEwYi1lZTI3LTQ2MmQtYTBhOS00MDA3NTVjNGRlNzEfCGcUKwAIBRswOjAsMDoxLDA6MiwwOjMsMDo0LDA6NSwwOjYUKwACFhAfAgUOTW9udGhseSBSZXBvcnQfAwUOTW9udGhseSBSZXBvcnQfBAUZL3JienRzL01vbnRobHlSZXBvcnQuYXNweB8KBQ5Nb250aGx5IFJlcG9ydB8FZx8GZx8HBRkvcmJ6dHMvbW9udGhseXJlcG9ydC5hc3B4HwhnZBQrAAIWEB8CBQ9Nb250aGx5IEdyYWRpbmcfAwUPTW9udGhseSBHcmFkaW5nHwQFIC9yYnp0cy9Nb250aGx5R3JhZGluZ1JlcG9ydC5hc3B4HwoFD01vbnRobHkgR3JhZGluZx8FZx8GZx8HBSAvcmJ6dHMvbW9udGhseWdyYWRpbmdyZXBvcnQuYXNweB8IZ2QUKwACFhAfAgVEVmVnZXRhYmxlIHdpc2UgU3RhdGUgd2lkZSBBcnJpdmFscyBhbmQgUHJpY2VzIEN1cnJlbnQgWWVhciBhbmQgTGFzdCAfAwVEVmVnZXRhYmxlIHdpc2UgU3RhdGUgd2lkZSBBcnJpdmFscyBhbmQgUHJpY2VzIEN1cnJlbnQgWWVhciBhbmQgTGFzdCAfBAU7L3JienRzL1NlbGVjdE1vbnRobHlBcnJpdmFsc1ByaWNlc0NvbW1vZGl0eXdpc2VhbGxEaXN0LmFzcHgfCgUOTW9udGhseSBSZXBvcnQfBWcfBmcfBwU7L3JienRzL3NlbGVjdG1vbnRobHlhcnJpdmFsc3ByaWNlc2NvbW1vZGl0eXdpc2VhbGxkaXN0LmFzcHgfCGdkFCsAAhYQHwIFK1N0YXRlIHdpZGUgVmVndGFibGVXaXNlIEFycml2YWxzIGFuZCBQcmljZXMfAwUrU3RhdGUgd2lkZSBWZWd0YWJsZVdpc2UgQXJyaXZhbHMgYW5kIFByaWNlcx8EBRovcmJ6dHMvTW9udGhseVZlZ0NvbXAuYXNweB8KBStTdGF0ZSB3aWRlIFZlZ3RhYmxlV2lzZSBBcnJpdmFscyBhbmQgUHJpY2VzHwVnHwZnHwcFGi9yYnp0cy9tb250aGx5dmVnY29tcC5hc3B4HwhnZBQrAAIWEB8CBTJEYXRlIHdpc2UgQXJyaXZhbHNQcmljZXMgIE1vbnRod2lzZSBDb21tb2RpdHkgd2lzZR8DBTJEYXRlIHdpc2UgQXJyaXZhbHNQcmljZXMgIE1vbnRod2lzZSBDb21tb2RpdHkgd2lzZR8EBT4vcmJ6dHMvU2VsZWN0RGFpbHlBcnJpdmFsc1ByaWNlc01vbnRod2lzZUFsbENvbW1vZGl0eXdpc2UuYXNweB8KBTJTZWxlY3REYWlseUFycml2YWxzUHJpY2VzTW9udGh3aXNlQWxsQ29tbW9kaXR5d2lzZR8FZx8GZx8HBT4vcmJ6dHMvc2VsZWN0ZGFpbHlhcnJpdmFsc3ByaWNlc21vbnRod2lzZWFsbGNvbW1vZGl0eXdpc2UuYXNweB8IZ2QUKwACFhAfAgUUUmVwb3J0IEJldHdlZW4gRGF0ZXMfAwUUUmVwb3J0IEJldHdlZW4gRGF0ZXMfBAUeL3JienRzL1JlcG9ydEJldHdlZW5EYXRlcy5hc3B4HwoFDk1vbnRobHkgUmVwb3J0HwVnHwZnHwcFHi9yYnp0cy9yZXBvcnRiZXR3ZWVuZGF0ZXMuYXNweB8IZ2QUKwACFhAfAgUPUmVwb3J0aW5nU3RhdHVzHwMFD1JlcG9ydGluZ1N0YXR1cx8EBRsvcmJ6dHMvUmVwb3J0aW5nU3RhdHVzLmFzcHgfCgUPUmVwb3J0aW5nU3RhdHVzHwVnHwZnHwcFGy9yYnp0cy9yZXBvcnRpbmdzdGF0dXMuYXNweB8IZ2QUKwACFgwfAgUOVmVnZXRhYmxlIHdpc2UfAwUOVmVnZXRhYmxlIHdpc2UfBWcfBmgfBwUkNWMxNGMwYTItYTc4Ny00NzJiLWEwMzgtMDgzYzhlNWVjYzI2HwhnFCsABAULMDowLDA6MSwwOjIUKwACFhAfAgUOVmVnZXRhYmxlIHdpc2UfAwUOVmVnZXRhYmxlIHdpc2UfBAUZL3JienRzL1ZlZ3dpc2VSZXBvcnQuYXNweB8KBQ5Nb250aGx5IFJlcG9ydB8FZx8GZx8HBRkvcmJ6dHMvdmVnd2lzZXJlcG9ydC5hc3B4HwhnZBQrAAIWEB8CBRRNb250aGx5VmVnZXRhYmxld2lzZR8DBRRNb250aGx5VmVnZXRhYmxld2lzZR8EBSIvcmJ6dHMvVmVnd2lzZU1vbnRod2lzZVJlcG9ydC5hc3B4HwoFDk1vbnRobHkgUmVwb3J0HwVnHwZnHwcFIi9yYnp0cy92ZWd3aXNlbW9udGh3aXNlcmVwb3J0LmFzcHgfCGdkFCsAAhYQHwIFFVZlZ3dpc2UgWWVhcmx5IFJlcG9ydB8DBRVWZWd3aXNlIFllYXJseSBSZXBvcnQfBAUfL3JienRzL1ZlZ3dpc2VZZWFybHlSZXBvcnQuYXNweB8KBQ5Nb250aGx5IFJlcG9ydB8FZx8GZx8HBR8vcmJ6dHMvdmVnd2lzZXllYXJseXJlcG9ydC5hc3B4HwhnZBQrAAIWDB8CBQ9SeXRodUJhemFyIHdpc2UfAwUPUnl0aHVCYXphciB3aXNlHwVnHwZoHwcFJGUyYjI4YTkyLTM3ZjItNGE2YS1hZTVlLTM5Y2Y4MjdiZWE2Zh8IZxQrAAYFEzA6MCwwOjEsMDoyLDA6MywwOjQUKwACFhAfAgUMRGFpbHkgUmVwb3J0HwMFDERhaWx5IFJlcG9ydB8EBSMvcmJ6dHMvRGF0ZXdpc2VTZWxlY3RyYnpQcmljZXMuYXNweB8KBShEYWlseSBSZXBvcnQgZm9yIGEgUGFydGljdWxhciBSeXRodUJhemFyHwVnHwZnHwcFIy9yYnp0cy9kYXRld2lzZXNlbGVjdHJienByaWNlcy5hc3B4HwhnZBQrAAIWEB8CBR5WZWdldGFibGUvRGF5IHdpc2UgZm9yIGEgTW9udGgfAwUeVmVnZXRhYmxlL0RheSB3aXNlIGZvciBhIE1vbnRoHwQFQi9yYnp0cy9TZWxlY3REYWlseUFycml2YWxzUHJpY2VzTW9udGh3aXNlUmJ6d2lzZUNvbW1vZGl0eXdpc2UuYXNweB8KBTZTZWxlY3REYWlseUFycml2YWxzUHJpY2VzTW9udGh3aXNlUmJ6d2lzZUNvbW1vZGl0eXdpc2UfBWcfBmcfBwVCL3JienRzL3NlbGVjdGRhaWx5YXJyaXZhbHNwcmljZXNtb250aHdpc2VyYnp3aXNlY29tbW9kaXR5d2lzZS5hc3B4HwhnZBQrAAIWEB8CBQ5Nb250aGx5IFJlcG9ydB8DBQ5Nb250aGx5IFJlcG9ydB8EBSYvcmJ6dHMvU2VsZWN0TW9udGhseUFsbFZlZ1Jiendpc2UuYXNweB8KBQ5Nb250aGx5IFJlcG9ydB8FZx8GZx8HBSYvcmJ6dHMvc2VsZWN0bW9udGhseWFsbHZlZ3Jiendpc2UuYXNweB8IZ2QUKwACFhAfAgUPWWVhcmx5IFJCWiB3aXNlHwMFD1llYXJseSBSQlogd2lzZR8EBR8vcmJ6dHMvU2VsZWN0eWVhcmx5cmJ6d2lzZS5hc3B4HwoFE1NlbGVjdHllYXJseXJiendpc2UfBWcfBmcfBwUfL3JienRzL3NlbGVjdHllYXJseXJiendpc2UuYXNweB8IZ2QUKwACFhAfAgUbTW9udGhseS1ZZWFybHkgUkJaLVZlZyB3aXNlHwMFG01vbnRobHktWWVhcmx5IFJCWi1WZWcgd2lzZR8EBSYvcmJ6dHMvU2VsZWN0eWVhcmx5cmJ6d2lzZVZlZ1dpc2UuYXNweB8KBRtNb250aGx5LVllYXJseSBSQlotVmVnIHdpc2UfBWcfBmcfBwUmL3JienRzL3NlbGVjdHllYXJseXJiendpc2V2ZWd3aXNlLmFzcHgfCGdkFCsAAhYMHwIFDURpc3RyaWN0IHdpc2UfAwUNRGlzdHJpY3Qgd2lzZR8FZx8GaB8HBSQ1MWFlMmEzMi01YTk2LTRjNzAtYWY0MS1lMWNiNTdlNWE0OGMfCGcUKwAEBQswOjAsMDoxLDA6MhQrAAIWEB8CBQtEYWlseVJlcG9ydB8DBQtEYWlseVJlcG9ydB8EBRQvcmJ6dHMvZGRyZXBvcnQuYXNweB8KBRREaXN0cmljdCBEYWlseVJlcG9ydB8FZx8GZx8HBRQvcmJ6dHMvZGRyZXBvcnQuYXNweB8IZ2QUKwACFhAfAgUaRGlzdHJpY3R3aXNlIEJldHdlZW4gRGF0ZXMfAwUaRGlzdHJpY3R3aXNlIEJldHdlZW4gRGF0ZXMfBAUmL3JienRzL1JlcG9ydGJldHdlZW5EYXRlc0Rpc3R3aXNlLmFzcHgfCgUOTW9udGhseSBSZXBvcnQfBWcfBmcfBwUmL3JienRzL3JlcG9ydGJldHdlZW5kYXRlc2Rpc3R3aXNlLmFzcHgfCGdkFCsAAhYQHwIFFERpc3RyaWN0d2lzZSBNb250aGx5HwMFFERpc3RyaWN0d2lzZSBNb250aGx5HwQFJy9yYnp0cy9TZWxlY3RNb250aGx5QWxsVmVnRGlzdHdpc2UuYXNweB8KBQ5Nb250aGx5IFJlcG9ydB8FZx8GZx8HBScvcmJ6dHMvc2VsZWN0bW9udGhseWFsbHZlZ2Rpc3R3aXNlLmFzcHgfCGdkFCsAAhYMHwIFEkluY29tZSBFeHBlbmRpdHVyZR8DBRJJbmNvbWUgRXhwZW5kaXR1cmUfBWcfBmgfBwUkN2Q1OTFmZmMtYjRiYy00MzQzLThiZDMtOTRiMGViNjFkMmY4HwhnFCsABQUPMDowLDA6MSwwOjIsMDozFCsAAhYOHwIFDEluY29tZSBFbnRyeR8DBQxJbmNvbWUgRW50cnkfBAUaL3JienRzL1JiekluY29tZUVudHJ5LmFzcHgfBWcfBmcfBwUaL3JienRzL3JiemluY29tZWVudHJ5LmFzcHgfCGdkFCsAAhYOHwIFEUV4cGVuZGl0dXJlIEVudHJ5HwMFEUV4cGVuZGl0dXJlIEVudHJ5HwQFHy9yYnp0cy9SYnpFeHBlbmRpdHVyZUVudHJ5LmFzcHgfBWcfBmcfBwUfL3JienRzL3JiemV4cGVuZGl0dXJlZW50cnkuYXNweB8IZ2QUKwACFg4fAgUNSW5jb21lIFJlcG9ydB8DBQ1JbmNvbWUgUmVwb3J0HwQFHy9yYnp0cy9JbmNvbWVNb250aGx5UmVwb3J0LmFzcHgfBWcfBmcfBwUfL3JienRzL2luY29tZW1vbnRobHlyZXBvcnQuYXNweB8IZ2QUKwACFg4fAgUSRXhwZW5kaXR1cmUgUmVwb3J0HwMFEkV4cGVuZGl0dXJlIFJlcG9ydB8EBSQvcmJ6dHMvRXhwZW5kaXR1cmVNb250aGx5UmVwb3J0LmFzcHgfBWcfBmcfBwUkL3JienRzL2V4cGVuZGl0dXJlbW9udGhseXJlcG9ydC5hc3B4HwhnZBQrAAIWDB8CBQhBYm91dCBVcx8DBQhBYm91dCBVcx8FZx8GaB8HBSQ1ZTMwZjU0ZC0xNGU0LTRhNWItODc5OC01Y2NiZmE2Mzc0MmQfCGcUKwAIBRswOjAsMDoxLDA6MiwwOjMsMDo0LDA6NSwwOjYUKwACFhAfAgUPUnl0aHVCYXphciBMaXN0HwMFD1J5dGh1QmF6YXIgTGlzdB8EBRovcmJ6dHMvUnl0aHVCYXphckxpc3QuYXNweB8KBQ9SeXRodUJhemFyIExpc3QfBWcfBmcfBwUaL3JienRzL3J5dGh1YmF6YXJsaXN0LmFzcHgfCGdkFCsAAhYQHwIFEEZ1bnRpb25hbCBNYW51YWwfAwUQRnVudGlvbmFsIE1hbnVhbB8EBSMvcmJ6dHMvRnVuY3Rpb25hbCBtYW51YWwxOC45LjA2Lmh0bR8KBSJGVU5DVElPTkFMIE1BTlVBTCBPTiAgUllUSFUgQkFaQVJTHwVnHwZnHwcFIy9yYnp0cy9mdW5jdGlvbmFsIG1hbnVhbDE4LjkuMDYuaHRtHwhnZBQrAAIWEB8CBQpPYmplY3RpdmVzHwMFCk9iamVjdGl2ZXMfBAUWL3JienRzL09iamVjdGl2ZXMuYXNweB8KBQpPYmplY3RpdmVzHwVnHwZnHwcFFi9yYnp0cy9vYmplY3RpdmVzLmFzcHgfCGdkFCsAAhYQHwIFFEZ1bnRpb25hbCBNYW51YWwgRG9jHwMFFEZ1bnRpb25hbCBNYW51YWwgRG9jHwQFIy9yYnp0cy9GdW5jdGlvbmFsIG1hbnVhbDE4LjkuMDYuZG9jHwoFIkZVTkNUSU9OQUwgTUFOVUFMIE9OICBSWVRIVSBCQVpBUlMfBWcfBmcfBwUjL3JienRzL2Z1bmN0aW9uYWwgbWFudWFsMTguOS4wNi5kb2MfCGdkFCsAAhYQHwIFIENvbXBlbmRpdW0gb2YgQ2lyY3VsYXJzIGFuZCBHLk9zHwMFIENvbXBlbmRpdW0gb2YgQ2lyY3VsYXJzIGFuZCBHLk9zHwQFFC9yYnp0cy9Eb2N1bWVudHMucGRmHwoFIENvbXBlbmRpdW0gb2YgQ2lyY3VsYXJzIGFuZCBHLk9zHwVnHwZnHwcFFC9yYnp0cy9kb2N1bWVudHMucGRmHwhnZBQrAAIWEB8CBQxDb250YWN0IE5vJ3MfAwUMQ29udGFjdCBObydzHwQFEy9yYnp0cy9jb250YWN0cy5IVE0fCgUMQ29udGFjdCBObydzHwVnHwZnHwcFEy9yYnp0cy9jb250YWN0cy5odG0fCGdkFCsAAhYOHwIFBlVwTG9hZB8DBQZVcExvYWQfBAUXL3JienRzL1VQbG9hZEZpbGVzLmFzcHgfBWcfBmcfBwUXL3JienRzL3VwbG9hZGZpbGVzLmFzcHgfCGdkFCsAAhYMHwIFFkNvbXBsYWludHMvU3VnZ2VzdGlvbnMfAwUWQ29tcGxhaW50cy9TdWdnZXN0aW9ucx8FZx8GaB8HBSQyZjhjZmQ4NC00ZTY0LTQ1M2MtYWY4My1mNDZjMjc3ZmRjNTAfCGcUKwADBQcwOjAsMDoxFCsAAhYOHwIFFkNvbXBsYWludHMvU3VnZ2VzdGlvbnMfAwUWQ29tcGxhaW50cy9TdWdnZXN0aW9ucx8EBSUvcmJ6dHMvQ29tcGxhaW50c2FuZFN1Z2dlc3Rpb25zIC5hc3B4HwVnHwZnHwcFJS9yYnp0cy9jb21wbGFpbnRzYW5kc3VnZ2VzdGlvbnMgLmFzcHgfCGdkFCsAAhYOHwIFD1ZpZXcgQ29tcGxhaW50cx8DBQ9WaWV3IENvbXBsYWludHMfBAUPL3JienRzL2Nzdi5hc3B4HwVnHwZnHwcFDy9yYnp0cy9jc3YuYXNweB8IZ2RkAgUPZBYGAgUPZBYCZg9kFgYCAw8QDxYGHg1EYXRhVGV4dEZpZWxkBQVkbmFtZR4ORGF0YVZhbHVlRmllbGQFA2Rubx8BZ2QPFiECAQICAgMCBAIFAgYCBwIIAgkCCgILAgwCDQIOAg8CEAIRAhICEwIUAhUCFgIXAhgCGQIaAhsCHAIdAh4CHwIgAiEWIRAFCEFkaWxhYmFkBQIxOWcQBRVCYWRyYWRyaSAoS290aGFndWRlbSkFAjQzZxAFCUh5ZGVyYWJhZAUCMTZnEAUISmFnaXR5YWwFAjM1ZxAFGkphaXNoYW5rYXIgKEJob29wYWxhcGFsbGkpBQIzN2cQBQdKYW5nYW9uBQIzOGcQBRJKb2d1bGFtYmEgKEdhZHdhbCkFAjMxZxAFCUthbWFyZWRkeQUCNDRnEAUKS2FyaW1uYWdhcgUCMjBnEAUHS2hhbW1hbQUCMjJnEAUXS29tYXJhbWJoZWVtIChBc2lmYWJhZCkFAjI1ZxAFC01haGFidWJhYmFkBQI0MGcQBQtNYWhidWJuYWdhcgUCMTRnEAUKTWFuY2hlcmlhbAUCMjRnEAUFTWVkYWsFAjE3ZxAFFE1lZGNoYWwgKE1hbGthamdpcmkpBQIyOGcQBQZNdWx1Z3UFAjQ1ZxAFDE5hZ2Fya3Vybm9vbAUCMjlnEAUITmFsZ29uZGEFAjIzZxAFCk5hcmF5YW5wZXQFAjQ2ZxAFBk5pcm1hbAUCMjZnEAUJTml6YW1hYmFkBQIxOGcQBQpQZWRkYXBhbGxpBQIzNmcQBRJSYWphbm5hIChTaXJjaWxsYSkFAjM0ZxAFClJhbmdhcmVkZHkFAjE1ZxAFC1NhbmdhIFJlZGR5BQIzMmcQBQhTaWRkaXBldAUCMzNnEAUIU3VyeWFwZXQFAjQxZxAFCVZpa2FyYWJhZAUCMjdnEAUKV2FuYXBhcnRoeQUCMzBnEAUIV2FyYW5nYWwFAjIxZxAFDldhcmFuZ2FsIFJ1cmFsBQIzOWcQBRFZYWRhZHJpIChCaG9uZ2lyKQUCNDJnFgECA2QCBw8QDxYGHwsFB3Jiem5hbWUfDAUFcmJ6bm8fAWdkEBUEGi0tLS0tLS0tLS0tU2VsZWN0LS0tLS0tLS0tC01laGRpcGF0bmFtCUZhbGFrbmFtYQlFcnJhZ2FkZGEVBBotLS0tLS0tLS0tLVNlbGVjdC0tLS0tLS0tLQI4MwI5MAI5MRQrAwRnZ2dnFgECAWQCCw88KwANAQAPFgQfAWceC18hSXRlbUNvdW50AhpkFgJmD2QWNAIBD2QWBGYPDxYCHwIFBFJpY2VkZAIBDw8WAh8CBQQ3MC8tZGQCAg9kFgRmDw8WAh8CBQxGcmVuY2ggQmVhbnNkZAIBDw8WAh8CBQQ2NS8tZGQCAw9kFgRmDw8WAh8CBQVLZWVyYWRkAgEPDxYCHwIFBDQwLy1kZAIED2QWBGYPDxYCHwIFCUJlZXQgUm9vdGRkAgEPDxYCHwIFBDM1Ly1kZAIFD2QWBGYPDxYCHwIFBUthbmRhZGQCAQ8PFgIfAgUEMzUvLWRkAgYPZBYEZg8PFgIfAgUQTGVhZnkgVmVnZXRhYmxlc2RkAgEPDxYCHwIFBDM1Ly1kZAIHD2QWBGYPDxYCHwIFCk11bGFnYWthZGFkZAIBDw8WAh8CBQM4Ly1kZAIID2QWBGYPDxYCHwIFEENvbG9jYXNpYShDaGFtYSlkZAIBDw8WAh8CBQQzMS8tZGQCCQ9kFgRmDw8WAh8CBQtGaWVsZCBCZWFuc2RkAgEPDxYCHwIFBDc1Ly1kZAIKD2QWBGYPDxYCHwIFCUFyYXRpa2F5YWRkAgEPDxYCHwIFBDEwLy1kZAILD2QWBGYPDxYCHwIFC1NuYWtlIEdvdXJkZGQCAQ8PFgIfAgUEMTgvLWRkAgwPZBYEZg8PFgIfAgUMQm90dGxlIEdvdXJkZGQCAQ8PFgIfAgUEMTkvLWRkAg0PZBYEZg8PFgIfAgUIQ3VjdW1iZXJkZAIBDw8WAh8CBQQyOC8tZGQCDg9kFgRmDw8WAh8CBQ1DbHVzdGVyIEJlYW5zZGQCAQ8PFgIfAgUENDUvLWRkAg8PZBYEZg8PFgIfAgUIT25pb25zLUlkZAIBDw8WAh8CBQQ0MC8tZGQCEA9kFgRmDw8WAh8CBQZQb3RhdG9kZAIBDw8WAh8CBQQxNy8tZGQCEQ9kFgRmDw8WAh8CBQVEb25kYWRkAgEPDxYCHwIFBDM1Ly1kZAISD2QWBGYPDxYCHwIFBkNhcnJvdGRkAgEPDxYCHwIFBDQ3Ly1kZAITD2QWBGYPDxYCHwIFB0NhYmJhZ2VkZAIBDw8WAh8CBQQxMy8tZGQCFA9kFgRmDw8WAh8CBQtDYXVsaWZsb3dlcmRkAgEPDxYCHwIFBDIzLy1kZAIVD2QWBGYPDxYCHwIFDFJpYmJlZCBHb3VyZGRkAgEPDxYCHwIFBDM4Ly1kZAIWD2QWBGYPDxYCHwIFDUJpdHRlciAgR291cmRkZAIBDw8WAh8CBQQ0NS8tZGQCFw9kFgRmDw8WAh8CBQ5HcmVlbiBDaGlsbGllc2RkAgEPDxYCHwIFBDUwLy1kZAIYD2QWBGYPDxYCHwIFBkJoZW5kaWRkAgEPDxYCHwIFBDU1Ly1kZAIZD2QWBGYPDxYCHwIFB0JyaW5qYWxkZAIBDw8WAh8CBQQyOC8tZGQCGg9kFgRmDw8WAh8CBQZUb21hdG9kZAIBDw8WAh8CBQQzMS8tZGQCCQ8PFgIfAgUKMDcvMTAvMjAyNmRkAg0PZBYCZg9kFgICBQ8PFgIeCEltYWdlVXJsBRB+L1Bob3Rvc01LLzEuanBnZGQYAwUeX19Db250cm9sc1JlcXVpcmVQb3N0QmFja0tleV9fFgEFEmN0bDAwJEltYWdlQnV0dG9uMQUjY3RsMDAkQ29udGVudFBsYWNlSG9sZGVyMSRHcmlkVmlldzEPPCsACgEIAgFkBQtjdGwwMCRNZW51MQ8PZAUESG9tZWQFF6TqiIhf3wUS81hUoHq8ljQU4A==" />
+
+
+<script src="/rbzts/WebResource.axd?d=C37FQosC2MSlFG0XbWcVDprUq2_1onvZqEaMWGKe-compdH5BCwodMkmphWRjLUnjnZwADf3bUPxeAu_GBD8_0xrtLg1&amp;t=639191727610812299" type="text/javascript"></script>
+<script src="/rbzts/ScriptResource.axd?d=fQS4veQn1xPOqopwhS7aiTa3TM92IA_5FrhOAnI2rQrv0Inqp2FMmrvxUsK0-Dlj8cwcU0zA-zCryY2WDcWmHuDJ-CRRXOktjHiIKfvZLKNlIOrqhwJi8oNVhfRp1BSQ8mhpUDTbBWAZB93XCTxOm7GbYQIiHjd7AIXBc4R398qSdzPv0&amp;t=ffffffffa50b82b2" type="text/javascript"></script>
+<script type="text/javascript">
+//<![CDATA[
+if (typeof(Sys) === 'undefined') throw new Error('ASP.NET Ajax client-side framework failed to load.');
+//]]>
+</script>
+
+<script src="/rbzts/ScriptResource.axd?d=cGCL-cVml5E6gTZydub3gGuF3HrcFC3c7rbaZXRVv1hzGHnfgH6UY3aS1-SOPy3adoD5I0pPuoFsyXfrHRbj4PghLnBPkv5y6-QC4NQ1NR7p7EXKzJ_9DdSa3CGh2WuiFb-P088UdqIuHC0kUacBzew5v0PV7ioC9own3IJdChHsqBnX0&amp;t=ffffffffa50b82b2" type="text/javascript"></script>
+<input type="hidden" name="__VIEWSTATEGENERATOR" id="__VIEWSTATEGENERATOR" value="0F48EF02" />
+<input type="hidden" name="__PREVIOUSPAGE" id="__PREVIOUSPAGE" value="cnB2Ft5IpcsWOGFnfKxzXEH-OxVg8MytIGg3rEHltXY8uQLo_kBv27H3NzuWwOKPNyICZML0GvrnM7Pa2vdXPh31mwg1" />
+<input type="hidden" name="__EVENTVALIDATION" id="__EVENTVALIDATION" value="/wEWKQLU8uKjBQLssvLQAwKVrcaTDgKKreqTDgKJrbKQDgKKrb6QDgKIrbqQDgKIraKQDgKIreaTDgKIrYqQDgKJrbaQDgKLrYaQDgKLrY6QDgKLrbqQDgKJrYaQDgKKrbaQDgKLrbaQDgKKraKQDgKLreaTDgKJrbqQDgKLreqTDgKLrbKQDgKJrb6QDgKLrb6QDgKKreaTDgKIrb6QDgKIrbaQDgKKrbqQDgKIrY6QDgKIrbKQDgKJrYqQDgKLraKQDgKIrYaQDgKLrYqQDgKIreqTDgKJrY6QDgKcr6JBAp3niZUPApLnvZUPApLnsZUPAo/o+ZsBhIMnqtW37izqDdNxwVjiGmWUhCc=" />
+    <div id="wrap">
+        <div id="header">        
+            <input type="image" name="ctl00$ImageButton1" id="ctl00_ImageButton1" src="App_Themes/RbzHeaderPhoto.JPG" border="0" />        
+        </div>
+        <div id="title">
+            <span class="style1">TELANGANA
+        RYTHU BAZAR INFORMATION SYSTEM</span>
+        </div>
+        <div>
+            <a href="#ctl00_Menu1_SkipLink"><img alt="Skip Navigation Links" src="/rbzts/WebResource.axd?d=zB8n11_Z6IROUlOgOOJgUG_Dx0GO0dL1197ap7LFgE5ux3SgDJDAKoV5xkAXhwWkKfWMbyJuX-iX4r2C8r66y1gK-zc1&amp;t=639191727610812299" width="0" height="0" border="0" /></a><table id="ctl00_Menu1" class="ctl00_Menu1_2" cellpadding="0" cellspacing="0" border="0">
+	<tr>
+		<td onmouseover="Menu_HoverRoot(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" id="ctl00_Menu1n0"><table class="ctl00_Menu1_4" cellpadding="0" cellspacing="0" border="0" width="100%">
+			<tr>
+				<td nowrap="nowrap"><a class="ctl00_Menu1_1 ctl00_Menu1_3" href="/rbzts/HomePage.aspx">Home</a></td>
+			</tr>
+		</table></td><td width="3"></td><td><table border="0" cellpadding="0" cellspacing="0" width="100%">
+			<tr>
+				<td onmouseover="Menu_HoverStatic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" id="ctl00_Menu1n1"><table class="ctl00_Menu1_4" cellpadding="0" cellspacing="0" border="0" width="100%">
+					<tr>
+						<td nowrap="nowrap"><a class="ctl00_Menu1_1 ctl00_Menu1_3" href="#">Daily Reports</a></td>
+					</tr>
+				</table></td><td width="3"></td><td onmouseover="Menu_HoverStatic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" id="ctl00_Menu1n2"><table class="ctl00_Menu1_4" cellpadding="0" cellspacing="0" border="0" width="100%">
+					<tr>
+						<td nowrap="nowrap"><a class="ctl00_Menu1_1 ctl00_Menu1_3" href="#">Monthly Reports</a></td>
+					</tr>
+				</table></td><td width="3"></td><td onmouseover="Menu_HoverStatic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" id="ctl00_Menu1n3"><table class="ctl00_Menu1_4" cellpadding="0" cellspacing="0" border="0" width="100%">
+					<tr>
+						<td nowrap="nowrap"><a class="ctl00_Menu1_1 ctl00_Menu1_3" href="#">Vegetable wise</a></td>
+					</tr>
+				</table></td><td width="3"></td><td onmouseover="Menu_HoverStatic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" id="ctl00_Menu1n4"><table class="ctl00_Menu1_4" cellpadding="0" cellspacing="0" border="0" width="100%">
+					<tr>
+						<td nowrap="nowrap"><a class="ctl00_Menu1_1 ctl00_Menu1_3" href="#">RythuBazar wise</a></td>
+					</tr>
+				</table></td><td width="3"></td><td onmouseover="Menu_HoverStatic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" id="ctl00_Menu1n5"><table class="ctl00_Menu1_4" cellpadding="0" cellspacing="0" border="0" width="100%">
+					<tr>
+						<td nowrap="nowrap"><a class="ctl00_Menu1_1 ctl00_Menu1_3" href="#">District wise</a></td>
+					</tr>
+				</table></td><td width="3"></td><td onmouseover="Menu_HoverStatic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" id="ctl00_Menu1n6"><table class="ctl00_Menu1_4" cellpadding="0" cellspacing="0" border="0" width="100%">
+					<tr>
+						<td nowrap="nowrap"><a class="ctl00_Menu1_1 ctl00_Menu1_3" href="#">Income Expenditure</a></td>
+					</tr>
+				</table></td><td width="3"></td><td onmouseover="Menu_HoverStatic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" id="ctl00_Menu1n7"><table class="ctl00_Menu1_4" cellpadding="0" cellspacing="0" border="0" width="100%">
+					<tr>
+						<td nowrap="nowrap"><a class="ctl00_Menu1_1 ctl00_Menu1_3" href="#">About Us</a></td>
+					</tr>
+				</table></td><td width="3"></td><td onmouseover="Menu_HoverStatic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" id="ctl00_Menu1n8"><table class="ctl00_Menu1_4" cellpadding="0" cellspacing="0" border="0" width="100%">
+					<tr>
+						<td nowrap="nowrap"><a class="ctl00_Menu1_1 ctl00_Menu1_3" href="#">Complaints/Suggestions</a></td>
+					</tr>
+				</table></td>
+			</tr>
+		</table><div id="ctl00_Menu1n1Items" class="ctl00_Menu1_0">
+			<table border="0" cellpadding="0" cellspacing="0">
+				<tr onmouseover="Menu_HoverDynamic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" title="Daily Arrivals Prices Report" id="ctl00_Menu1n9">
+					<td><table cellpadding="0" cellspacing="0" border="0" width="100%">
+						<tr>
+							<td nowrap="nowrap" width="100%"><a class="ctl00_Menu1_1" href="/rbzts/DailyPrices.aspx">Daily Report</a></td>
+						</tr>
+					</table></td>
+				</tr><tr onmouseover="Menu_HoverDynamic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" title="Minmum Maximum Modal Price Report" id="ctl00_Menu1n10">
+					<td><table cellpadding="0" cellspacing="0" border="0" width="100%">
+						<tr>
+							<td nowrap="nowrap" width="100%"><a class="ctl00_Menu1_1" href="/rbzts/mmm.aspx">Minimum,Maximum,Model Rates</a></td>
+						</tr>
+					</table></td>
+				</tr><tr onmouseover="Menu_HoverDynamic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" title="Not Reported RBZ's on particualar day" id="ctl00_Menu1n11">
+					<td><table cellpadding="0" cellspacing="0" border="0" width="100%">
+						<tr>
+							<td nowrap="nowrap" width="100%"><a class="ctl00_Menu1_1" href="/rbzts/NotReportedrbzs.aspx">Not Reported RBZ's</a></td>
+						</tr>
+					</table></td>
+				</tr><tr onmouseover="Menu_HoverDynamic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" title="WholeSaleRates" id="ctl00_Menu1n12">
+					<td><table cellpadding="0" cellspacing="0" border="0" width="100%">
+						<tr>
+							<td nowrap="nowrap" width="100%"><a class="ctl00_Menu1_1" href="/rbzts/SelectdailyCompforMonth.aspx">Daily Comparitive</a></td>
+						</tr>
+					</table></td>
+				</tr><tr onmouseover="Menu_HoverDynamic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" title="DailyCommWise" id="ctl00_Menu1n13">
+					<td><table cellpadding="0" cellspacing="0" border="0" width="100%">
+						<tr>
+							<td nowrap="nowrap" width="100%"><a class="ctl00_Menu1_1" href="/rbzts/DailyCommWise.aspx">Daily Vegitablewise</a></td>
+						</tr>
+					</table></td>
+				</tr>
+			</table><div class="ctl00_Menu1_0" id="ctl00_Menu1n1ItemsUp" onmouseover="PopOut_Up(this)" onmouseout="PopOut_Stop(this)" align="center">
+				<img src="/rbzts/WebResource.axd?d=2xvbNxxi1-ghcOD_UzEBFGKRbtBC_ikUjyLwv_nYZl7M94YhOWfhNMdIo29IQuXqjWynJ0TMx4hur0q28C1FMr6NBmQ1&amp;t=639191727610812299" alt="Scroll up" />
+			</div><div class="ctl00_Menu1_0" id="ctl00_Menu1n1ItemsDn" onmouseover="PopOut_Down(this)" onmouseout="PopOut_Stop(this)" align="center">
+				<img src="/rbzts/WebResource.axd?d=UwSy6B8sYSgJeXEfOjaDTjofX7T5rzhRIlTMJ6_UqfUs1PGJIjGywp8SX4bbLz0tnLuMUVTwLccOyKsInd_KYHSFM7g1&amp;t=639191727610812299" alt="Scroll down" />
+			</div>
+		</div><div id="ctl00_Menu1n2Items" class="ctl00_Menu1_0">
+			<table border="0" cellpadding="0" cellspacing="0">
+				<tr onmouseover="Menu_HoverDynamic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" title="Monthly Report" id="ctl00_Menu1n14">
+					<td><table cellpadding="0" cellspacing="0" border="0" width="100%">
+						<tr>
+							<td nowrap="nowrap" width="100%"><a class="ctl00_Menu1_1" href="/rbzts/MonthlyReport.aspx">Monthly Report</a></td>
+						</tr>
+					</table></td>
+				</tr><tr onmouseover="Menu_HoverDynamic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" title="Monthly Grading" id="ctl00_Menu1n15">
+					<td><table cellpadding="0" cellspacing="0" border="0" width="100%">
+						<tr>
+							<td nowrap="nowrap" width="100%"><a class="ctl00_Menu1_1" href="/rbzts/MonthlyGradingReport.aspx">Monthly Grading</a></td>
+						</tr>
+					</table></td>
+				</tr><tr onmouseover="Menu_HoverDynamic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" title="Monthly Report" id="ctl00_Menu1n16">
+					<td><table cellpadding="0" cellspacing="0" border="0" width="100%">
+						<tr>
+							<td nowrap="nowrap" width="100%"><a class="ctl00_Menu1_1" href="/rbzts/SelectMonthlyArrivalsPricesCommoditywiseallDist.aspx">Vegetable wise State wide Arrivals and Prices Current Year and Last </a></td>
+						</tr>
+					</table></td>
+				</tr><tr onmouseover="Menu_HoverDynamic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" title="State wide VegtableWise Arrivals and Prices" id="ctl00_Menu1n17">
+					<td><table cellpadding="0" cellspacing="0" border="0" width="100%">
+						<tr>
+							<td nowrap="nowrap" width="100%"><a class="ctl00_Menu1_1" href="/rbzts/MonthlyVegComp.aspx">State wide VegtableWise Arrivals and Prices</a></td>
+						</tr>
+					</table></td>
+				</tr><tr onmouseover="Menu_HoverDynamic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" title="SelectDailyArrivalsPricesMonthwiseAllCommoditywise" id="ctl00_Menu1n18">
+					<td><table cellpadding="0" cellspacing="0" border="0" width="100%">
+						<tr>
+							<td nowrap="nowrap" width="100%"><a class="ctl00_Menu1_1" href="/rbzts/SelectDailyArrivalsPricesMonthwiseAllCommoditywise.aspx">Date wise ArrivalsPrices  Monthwise Commodity wise</a></td>
+						</tr>
+					</table></td>
+				</tr><tr onmouseover="Menu_HoverDynamic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" title="Monthly Report" id="ctl00_Menu1n19">
+					<td><table cellpadding="0" cellspacing="0" border="0" width="100%">
+						<tr>
+							<td nowrap="nowrap" width="100%"><a class="ctl00_Menu1_1" href="/rbzts/ReportBetweenDates.aspx">Report Between Dates</a></td>
+						</tr>
+					</table></td>
+				</tr><tr onmouseover="Menu_HoverDynamic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" title="ReportingStatus" id="ctl00_Menu1n20">
+					<td><table cellpadding="0" cellspacing="0" border="0" width="100%">
+						<tr>
+							<td nowrap="nowrap" width="100%"><a class="ctl00_Menu1_1" href="/rbzts/ReportingStatus.aspx">ReportingStatus</a></td>
+						</tr>
+					</table></td>
+				</tr>
+			</table><div class="ctl00_Menu1_0" id="ctl00_Menu1n2ItemsUp" onmouseover="PopOut_Up(this)" onmouseout="PopOut_Stop(this)" align="center">
+				<img src="/rbzts/WebResource.axd?d=2xvbNxxi1-ghcOD_UzEBFGKRbtBC_ikUjyLwv_nYZl7M94YhOWfhNMdIo29IQuXqjWynJ0TMx4hur0q28C1FMr6NBmQ1&amp;t=639191727610812299" alt="Scroll up" />
+			</div><div class="ctl00_Menu1_0" id="ctl00_Menu1n2ItemsDn" onmouseover="PopOut_Down(this)" onmouseout="PopOut_Stop(this)" align="center">
+				<img src="/rbzts/WebResource.axd?d=UwSy6B8sYSgJeXEfOjaDTjofX7T5rzhRIlTMJ6_UqfUs1PGJIjGywp8SX4bbLz0tnLuMUVTwLccOyKsInd_KYHSFM7g1&amp;t=639191727610812299" alt="Scroll down" />
+			</div>
+		</div><div id="ctl00_Menu1n3Items" class="ctl00_Menu1_0">
+			<table border="0" cellpadding="0" cellspacing="0">
+				<tr onmouseover="Menu_HoverDynamic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" title="Monthly Report" id="ctl00_Menu1n21">
+					<td><table cellpadding="0" cellspacing="0" border="0" width="100%">
+						<tr>
+							<td nowrap="nowrap" width="100%"><a class="ctl00_Menu1_1" href="/rbzts/VegwiseReport.aspx">Vegetable wise</a></td>
+						</tr>
+					</table></td>
+				</tr><tr onmouseover="Menu_HoverDynamic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" title="Monthly Report" id="ctl00_Menu1n22">
+					<td><table cellpadding="0" cellspacing="0" border="0" width="100%">
+						<tr>
+							<td nowrap="nowrap" width="100%"><a class="ctl00_Menu1_1" href="/rbzts/VegwiseMonthwiseReport.aspx">MonthlyVegetablewise</a></td>
+						</tr>
+					</table></td>
+				</tr><tr onmouseover="Menu_HoverDynamic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" title="Monthly Report" id="ctl00_Menu1n23">
+					<td><table cellpadding="0" cellspacing="0" border="0" width="100%">
+						<tr>
+							<td nowrap="nowrap" width="100%"><a class="ctl00_Menu1_1" href="/rbzts/VegwiseYearlyReport.aspx">Vegwise Yearly Report</a></td>
+						</tr>
+					</table></td>
+				</tr>
+			</table><div class="ctl00_Menu1_0" id="ctl00_Menu1n3ItemsUp" onmouseover="PopOut_Up(this)" onmouseout="PopOut_Stop(this)" align="center">
+				<img src="/rbzts/WebResource.axd?d=2xvbNxxi1-ghcOD_UzEBFGKRbtBC_ikUjyLwv_nYZl7M94YhOWfhNMdIo29IQuXqjWynJ0TMx4hur0q28C1FMr6NBmQ1&amp;t=639191727610812299" alt="Scroll up" />
+			</div><div class="ctl00_Menu1_0" id="ctl00_Menu1n3ItemsDn" onmouseover="PopOut_Down(this)" onmouseout="PopOut_Stop(this)" align="center">
+				<img src="/rbzts/WebResource.axd?d=UwSy6B8sYSgJeXEfOjaDTjofX7T5rzhRIlTMJ6_UqfUs1PGJIjGywp8SX4bbLz0tnLuMUVTwLccOyKsInd_KYHSFM7g1&amp;t=639191727610812299" alt="Scroll down" />
+			</div>
+		</div><div id="ctl00_Menu1n4Items" class="ctl00_Menu1_0">
+			<table border="0" cellpadding="0" cellspacing="0">
+				<tr onmouseover="Menu_HoverDynamic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" title="Daily Report for a Particular RythuBazar" id="ctl00_Menu1n24">
+					<td><table cellpadding="0" cellspacing="0" border="0" width="100%">
+						<tr>
+							<td nowrap="nowrap" width="100%"><a class="ctl00_Menu1_1" href="/rbzts/DatewiseSelectrbzPrices.aspx">Daily Report</a></td>
+						</tr>
+					</table></td>
+				</tr><tr onmouseover="Menu_HoverDynamic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" title="SelectDailyArrivalsPricesMonthwiseRbzwiseCommoditywise" id="ctl00_Menu1n25">
+					<td><table cellpadding="0" cellspacing="0" border="0" width="100%">
+						<tr>
+							<td nowrap="nowrap" width="100%"><a class="ctl00_Menu1_1" href="/rbzts/SelectDailyArrivalsPricesMonthwiseRbzwiseCommoditywise.aspx">Vegetable/Day wise for a Month</a></td>
+						</tr>
+					</table></td>
+				</tr><tr onmouseover="Menu_HoverDynamic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" title="Monthly Report" id="ctl00_Menu1n26">
+					<td><table cellpadding="0" cellspacing="0" border="0" width="100%">
+						<tr>
+							<td nowrap="nowrap" width="100%"><a class="ctl00_Menu1_1" href="/rbzts/SelectMonthlyAllVegRbzwise.aspx">Monthly Report</a></td>
+						</tr>
+					</table></td>
+				</tr><tr onmouseover="Menu_HoverDynamic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" title="Selectyearlyrbzwise" id="ctl00_Menu1n27">
+					<td><table cellpadding="0" cellspacing="0" border="0" width="100%">
+						<tr>
+							<td nowrap="nowrap" width="100%"><a class="ctl00_Menu1_1" href="/rbzts/Selectyearlyrbzwise.aspx">Yearly RBZ wise</a></td>
+						</tr>
+					</table></td>
+				</tr><tr onmouseover="Menu_HoverDynamic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" title="Monthly-Yearly RBZ-Veg wise" id="ctl00_Menu1n28">
+					<td><table cellpadding="0" cellspacing="0" border="0" width="100%">
+						<tr>
+							<td nowrap="nowrap" width="100%"><a class="ctl00_Menu1_1" href="/rbzts/SelectyearlyrbzwiseVegWise.aspx">Monthly-Yearly RBZ-Veg wise</a></td>
+						</tr>
+					</table></td>
+				</tr>
+			</table><div class="ctl00_Menu1_0" id="ctl00_Menu1n4ItemsUp" onmouseover="PopOut_Up(this)" onmouseout="PopOut_Stop(this)" align="center">
+				<img src="/rbzts/WebResource.axd?d=2xvbNxxi1-ghcOD_UzEBFGKRbtBC_ikUjyLwv_nYZl7M94YhOWfhNMdIo29IQuXqjWynJ0TMx4hur0q28C1FMr6NBmQ1&amp;t=639191727610812299" alt="Scroll up" />
+			</div><div class="ctl00_Menu1_0" id="ctl00_Menu1n4ItemsDn" onmouseover="PopOut_Down(this)" onmouseout="PopOut_Stop(this)" align="center">
+				<img src="/rbzts/WebResource.axd?d=UwSy6B8sYSgJeXEfOjaDTjofX7T5rzhRIlTMJ6_UqfUs1PGJIjGywp8SX4bbLz0tnLuMUVTwLccOyKsInd_KYHSFM7g1&amp;t=639191727610812299" alt="Scroll down" />
+			</div>
+		</div><div id="ctl00_Menu1n5Items" class="ctl00_Menu1_0">
+			<table border="0" cellpadding="0" cellspacing="0">
+				<tr onmouseover="Menu_HoverDynamic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" title="District DailyReport" id="ctl00_Menu1n29">
+					<td><table cellpadding="0" cellspacing="0" border="0" width="100%">
+						<tr>
+							<td nowrap="nowrap" width="100%"><a class="ctl00_Menu1_1" href="/rbzts/ddreport.aspx">DailyReport</a></td>
+						</tr>
+					</table></td>
+				</tr><tr onmouseover="Menu_HoverDynamic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" title="Monthly Report" id="ctl00_Menu1n30">
+					<td><table cellpadding="0" cellspacing="0" border="0" width="100%">
+						<tr>
+							<td nowrap="nowrap" width="100%"><a class="ctl00_Menu1_1" href="/rbzts/ReportbetweenDatesDistwise.aspx">Districtwise Between Dates</a></td>
+						</tr>
+					</table></td>
+				</tr><tr onmouseover="Menu_HoverDynamic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" title="Monthly Report" id="ctl00_Menu1n31">
+					<td><table cellpadding="0" cellspacing="0" border="0" width="100%">
+						<tr>
+							<td nowrap="nowrap" width="100%"><a class="ctl00_Menu1_1" href="/rbzts/SelectMonthlyAllVegDistwise.aspx">Districtwise Monthly</a></td>
+						</tr>
+					</table></td>
+				</tr>
+			</table><div class="ctl00_Menu1_0" id="ctl00_Menu1n5ItemsUp" onmouseover="PopOut_Up(this)" onmouseout="PopOut_Stop(this)" align="center">
+				<img src="/rbzts/WebResource.axd?d=2xvbNxxi1-ghcOD_UzEBFGKRbtBC_ikUjyLwv_nYZl7M94YhOWfhNMdIo29IQuXqjWynJ0TMx4hur0q28C1FMr6NBmQ1&amp;t=639191727610812299" alt="Scroll up" />
+			</div><div class="ctl00_Menu1_0" id="ctl00_Menu1n5ItemsDn" onmouseover="PopOut_Down(this)" onmouseout="PopOut_Stop(this)" align="center">
+				<img src="/rbzts/WebResource.axd?d=UwSy6B8sYSgJeXEfOjaDTjofX7T5rzhRIlTMJ6_UqfUs1PGJIjGywp8SX4bbLz0tnLuMUVTwLccOyKsInd_KYHSFM7g1&amp;t=639191727610812299" alt="Scroll down" />
+			</div>
+		</div><div id="ctl00_Menu1n6Items" class="ctl00_Menu1_0">
+			<table border="0" cellpadding="0" cellspacing="0">
+				<tr onmouseover="Menu_HoverDynamic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" id="ctl00_Menu1n32">
+					<td><table cellpadding="0" cellspacing="0" border="0" width="100%">
+						<tr>
+							<td nowrap="nowrap" width="100%"><a class="ctl00_Menu1_1" href="/rbzts/RbzIncomeEntry.aspx">Income Entry</a></td>
+						</tr>
+					</table></td>
+				</tr><tr onmouseover="Menu_HoverDynamic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" id="ctl00_Menu1n33">
+					<td><table cellpadding="0" cellspacing="0" border="0" width="100%">
+						<tr>
+							<td nowrap="nowrap" width="100%"><a class="ctl00_Menu1_1" href="/rbzts/RbzExpenditureEntry.aspx">Expenditure Entry</a></td>
+						</tr>
+					</table></td>
+				</tr><tr onmouseover="Menu_HoverDynamic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" id="ctl00_Menu1n34">
+					<td><table cellpadding="0" cellspacing="0" border="0" width="100%">
+						<tr>
+							<td nowrap="nowrap" width="100%"><a class="ctl00_Menu1_1" href="/rbzts/IncomeMonthlyReport.aspx">Income Report</a></td>
+						</tr>
+					</table></td>
+				</tr><tr onmouseover="Menu_HoverDynamic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" id="ctl00_Menu1n35">
+					<td><table cellpadding="0" cellspacing="0" border="0" width="100%">
+						<tr>
+							<td nowrap="nowrap" width="100%"><a class="ctl00_Menu1_1" href="/rbzts/ExpenditureMonthlyReport.aspx">Expenditure Report</a></td>
+						</tr>
+					</table></td>
+				</tr>
+			</table><div class="ctl00_Menu1_0" id="ctl00_Menu1n6ItemsUp" onmouseover="PopOut_Up(this)" onmouseout="PopOut_Stop(this)" align="center">
+				<img src="/rbzts/WebResource.axd?d=2xvbNxxi1-ghcOD_UzEBFGKRbtBC_ikUjyLwv_nYZl7M94YhOWfhNMdIo29IQuXqjWynJ0TMx4hur0q28C1FMr6NBmQ1&amp;t=639191727610812299" alt="Scroll up" />
+			</div><div class="ctl00_Menu1_0" id="ctl00_Menu1n6ItemsDn" onmouseover="PopOut_Down(this)" onmouseout="PopOut_Stop(this)" align="center">
+				<img src="/rbzts/WebResource.axd?d=UwSy6B8sYSgJeXEfOjaDTjofX7T5rzhRIlTMJ6_UqfUs1PGJIjGywp8SX4bbLz0tnLuMUVTwLccOyKsInd_KYHSFM7g1&amp;t=639191727610812299" alt="Scroll down" />
+			</div>
+		</div><div id="ctl00_Menu1n7Items" class="ctl00_Menu1_0">
+			<table border="0" cellpadding="0" cellspacing="0">
+				<tr onmouseover="Menu_HoverDynamic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" title="RythuBazar List" id="ctl00_Menu1n36">
+					<td><table cellpadding="0" cellspacing="0" border="0" width="100%">
+						<tr>
+							<td nowrap="nowrap" width="100%"><a class="ctl00_Menu1_1" href="/rbzts/RythuBazarList.aspx">RythuBazar List</a></td>
+						</tr>
+					</table></td>
+				</tr><tr onmouseover="Menu_HoverDynamic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" title="FUNCTIONAL MANUAL ON  RYTHU BAZARS" id="ctl00_Menu1n37">
+					<td><table cellpadding="0" cellspacing="0" border="0" width="100%">
+						<tr>
+							<td nowrap="nowrap" width="100%"><a class="ctl00_Menu1_1" href="/rbzts/Functional%20manual18.9.06.htm">Funtional Manual</a></td>
+						</tr>
+					</table></td>
+				</tr><tr onmouseover="Menu_HoverDynamic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" title="Objectives" id="ctl00_Menu1n38">
+					<td><table cellpadding="0" cellspacing="0" border="0" width="100%">
+						<tr>
+							<td nowrap="nowrap" width="100%"><a class="ctl00_Menu1_1" href="/rbzts/Objectives.aspx">Objectives</a></td>
+						</tr>
+					</table></td>
+				</tr><tr onmouseover="Menu_HoverDynamic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" title="FUNCTIONAL MANUAL ON  RYTHU BAZARS" id="ctl00_Menu1n39">
+					<td><table cellpadding="0" cellspacing="0" border="0" width="100%">
+						<tr>
+							<td nowrap="nowrap" width="100%"><a class="ctl00_Menu1_1" href="/rbzts/Functional%20manual18.9.06.doc">Funtional Manual Doc</a></td>
+						</tr>
+					</table></td>
+				</tr><tr onmouseover="Menu_HoverDynamic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" title="Compendium of Circulars and G.Os" id="ctl00_Menu1n40">
+					<td><table cellpadding="0" cellspacing="0" border="0" width="100%">
+						<tr>
+							<td nowrap="nowrap" width="100%"><a class="ctl00_Menu1_1" href="/rbzts/Documents.pdf">Compendium of Circulars and G.Os</a></td>
+						</tr>
+					</table></td>
+				</tr><tr onmouseover="Menu_HoverDynamic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" title="Contact No's" id="ctl00_Menu1n41">
+					<td><table cellpadding="0" cellspacing="0" border="0" width="100%">
+						<tr>
+							<td nowrap="nowrap" width="100%"><a class="ctl00_Menu1_1" href="/rbzts/contacts.HTM">Contact No's</a></td>
+						</tr>
+					</table></td>
+				</tr><tr onmouseover="Menu_HoverDynamic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" id="ctl00_Menu1n42">
+					<td><table cellpadding="0" cellspacing="0" border="0" width="100%">
+						<tr>
+							<td nowrap="nowrap" width="100%"><a class="ctl00_Menu1_1" href="/rbzts/UPloadFiles.aspx">UpLoad</a></td>
+						</tr>
+					</table></td>
+				</tr>
+			</table><div class="ctl00_Menu1_0" id="ctl00_Menu1n7ItemsUp" onmouseover="PopOut_Up(this)" onmouseout="PopOut_Stop(this)" align="center">
+				<img src="/rbzts/WebResource.axd?d=2xvbNxxi1-ghcOD_UzEBFGKRbtBC_ikUjyLwv_nYZl7M94YhOWfhNMdIo29IQuXqjWynJ0TMx4hur0q28C1FMr6NBmQ1&amp;t=639191727610812299" alt="Scroll up" />
+			</div><div class="ctl00_Menu1_0" id="ctl00_Menu1n7ItemsDn" onmouseover="PopOut_Down(this)" onmouseout="PopOut_Stop(this)" align="center">
+				<img src="/rbzts/WebResource.axd?d=UwSy6B8sYSgJeXEfOjaDTjofX7T5rzhRIlTMJ6_UqfUs1PGJIjGywp8SX4bbLz0tnLuMUVTwLccOyKsInd_KYHSFM7g1&amp;t=639191727610812299" alt="Scroll down" />
+			</div>
+		</div><div id="ctl00_Menu1n8Items" class="ctl00_Menu1_0">
+			<table border="0" cellpadding="0" cellspacing="0">
+				<tr onmouseover="Menu_HoverDynamic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" id="ctl00_Menu1n43">
+					<td><table cellpadding="0" cellspacing="0" border="0" width="100%">
+						<tr>
+							<td nowrap="nowrap" width="100%"><a class="ctl00_Menu1_1" href="/rbzts/ComplaintsandSuggestions%20.aspx">Complaints/Suggestions</a></td>
+						</tr>
+					</table></td>
+				</tr><tr onmouseover="Menu_HoverDynamic(this)" onmouseout="Menu_Unhover(this)" onkeyup="Menu_Key(event)" id="ctl00_Menu1n44">
+					<td><table cellpadding="0" cellspacing="0" border="0" width="100%">
+						<tr>
+							<td nowrap="nowrap" width="100%"><a class="ctl00_Menu1_1" href="/rbzts/csv.aspx">View Complaints</a></td>
+						</tr>
+					</table></td>
+				</tr>
+			</table><div class="ctl00_Menu1_0" id="ctl00_Menu1n8ItemsUp" onmouseover="PopOut_Up(this)" onmouseout="PopOut_Stop(this)" align="center">
+				<img src="/rbzts/WebResource.axd?d=2xvbNxxi1-ghcOD_UzEBFGKRbtBC_ikUjyLwv_nYZl7M94YhOWfhNMdIo29IQuXqjWynJ0TMx4hur0q28C1FMr6NBmQ1&amp;t=639191727610812299" alt="Scroll up" />
+			</div><div class="ctl00_Menu1_0" id="ctl00_Menu1n8ItemsDn" onmouseover="PopOut_Down(this)" onmouseout="PopOut_Stop(this)" align="center">
+				<img src="/rbzts/WebResource.axd?d=UwSy6B8sYSgJeXEfOjaDTjofX7T5rzhRIlTMJ6_UqfUs1PGJIjGywp8SX4bbLz0tnLuMUVTwLccOyKsInd_KYHSFM7g1&amp;t=639191727610812299" alt="Scroll down" />
+			</div>
+		</div></td>
+	</tr>
+</table><a id="ctl00_Menu1_SkipLink"></a>
+        </div>
+    <br />
+    
+    <div id="content">
+        
+    
+    <div>
+        <marquee behavior="SCROLL" scrolldelay="100?" onmouseover='this.stop();' onmouseout='this.start();'> 
+          <span id="ctl00_ContentPlaceHolder1_lblNews"><b><font color="#E88B00"></font></b></span></marquee>
+        
+        <br />
+    </div>
+    <div id="ctl00_ContentPlaceHolder1_UpdatePanel1">
+	
+            <div id="avmenu">
+                <center>
+                    <div style="background-color: #FFFFCC; color: #008000; font-weight: bold;">
+                        <img alt="" src="App_Themes/new.gif" style="background-color: #FFFFFF" />Know today’s
+                        Vegetables prices in your Town<br />
+                        -------------------------<br />
+                        <span id="ctl00_ContentPlaceHolder1_Label2"><font color="#CC3300">Select District</font></span>&nbsp;
+                        <select name="ctl00$ContentPlaceHolder1$ddlDist" id="ctl00_ContentPlaceHolder1_ddlDist">
+		<option value="0">-------------Select-----------</option>
+		<option value="19">Adilabad</option>
+		<option value="43">Badradri (Kothagudem)</option>
+		<option selected="selected" value="16">Hyderabad</option>
+		<option value="35">Jagityal</option>
+		<option value="37">Jaishankar (Bhoopalapalli)</option>
+		<option value="38">Jangaon</option>
+		<option value="31">Jogulamba (Gadwal)</option>
+		<option value="44">Kamareddy</option>
+		<option value="20">Karimnagar</option>
+		<option value="22">Khammam</option>
+		<option value="25">Komarambheem (Asifabad)</option>
+		<option value="40">Mahabubabad</option>
+		<option value="14">Mahbubnagar</option>
+		<option value="24">Mancherial</option>
+		<option value="17">Medak</option>
+		<option value="28">Medchal (Malkajgiri)</option>
+		<option value="45">Mulugu</option>
+		<option value="29">Nagarkurnool</option>
+		<option value="23">Nalgonda</option>
+		<option value="46">Narayanpet</option>
+		<option value="26">Nirmal</option>
+		<option value="18">Nizamabad</option>
+		<option value="36">Peddapalli</option>
+		<option value="34">Rajanna (Sircilla)</option>
+		<option value="15">Rangareddy</option>
+		<option value="32">Sanga Reddy</option>
+		<option value="33">Siddipet</option>
+		<option value="41">Suryapet</option>
+		<option value="27">Vikarabad</option>
+		<option value="30">Wanaparthy</option>
+		<option value="21">Warangal</option>
+		<option value="39">Warangal Rural</option>
+		<option value="42">Yadadri (Bhongir)</option>
+
+	</select>
+                        <span id="ctl00_ContentPlaceHolder1_Label3"><font color="#CC3300">Select Rythubazar</font></span>
+                        &nbsp;<select name="ctl00$ContentPlaceHolder1$ddlRbz" id="ctl00_ContentPlaceHolder1_ddlRbz" tabindex="2">
+		<option value="-----------Select---------">-----------Select---------</option>
+		<option selected="selected" value="83">Mehdipatnam</option>
+		<option value="90">Falaknama</option>
+		<option value="91">Erragadda</option>
+
+	</select>
+                    </div>
+                </center>
+                <div id="ctl00_ContentPlaceHolder1_UpdateProgress1" style="display:none;">
+		
+                        <center>
+                            <img alt="" src="App_Themes/ajax-loader.gif" /></center>
+                    
+	</div>
+                <div>
+                    <marquee behavior="SCROLL" direction="down" scrollamount="2" onmouseover='this.stop();'
+                        onmouseout='this.start();'>
+      <div>
+		<table cellspacing="0" cellpadding="4" rules="all" wrap="true" bordercolor="#DEDFDE" border="1" id="ctl00_ContentPlaceHolder1_GridView1" bgcolor="White">
+			<tr>
+				<th scope="col"><font color="Black">Vegetable</font></th><th scope="col"><font color="Black">Our Rate</font></th>
+			</tr><tr bgcolor="#F7F7DE">
+				<td><font color="Black">Rice</font></td><td><font color="Black">70/-</font></td>
+			</tr><tr bgcolor="White">
+				<td><font color="Black">French Beans</font></td><td><font color="Black">65/-</font></td>
+			</tr><tr bgcolor="#F7F7DE">
+				<td><font color="Black">Keera</font></td><td><font color="Black">40/-</font></td>
+			</tr><tr bgcolor="White">
+				<td><font color="Black">Beet Root</font></td><td><font color="Black">35/-</font></td>
+			</tr><tr bgcolor="#F7F7DE">
+				<td><font color="Black">Kanda</font></td><td><font color="Black">35/-</font></td>
+			</tr><tr bgcolor="White">
+				<td><font color="Black">Leafy Vegetables</font></td><td><font color="Black">35/-</font></td>
+			</tr><tr bgcolor="#F7F7DE">
+				<td><font color="Black">Mulagakada</font></td><td><font color="Black">8/-</font></td>
+			</tr><tr bgcolor="White">
+				<td><font color="Black">Colocasia(Chama)</font></td><td><font color="Black">31/-</font></td>
+			</tr><tr bgcolor="#F7F7DE">
+				<td><font color="Black">Field Beans</font></td><td><font color="Black">75/-</font></td>
+			</tr><tr bgcolor="White">
+				<td><font color="Black">Aratikaya</font></td><td><font color="Black">10/-</font></td>
+			</tr><tr bgcolor="#F7F7DE">
+				<td><font color="Black">Snake Gourd</font></td><td><font color="Black">18/-</font></td>
+			</tr><tr bgcolor="White">
+				<td><font color="Black">Bottle Gourd</font></td><td><font color="Black">19/-</font></td>
+			</tr><tr bgcolor="#F7F7DE">
+				<td><font color="Black">Cucumber</font></td><td><font color="Black">28/-</font></td>
+			</tr><tr bgcolor="White">
+				<td><font color="Black">Cluster Beans</font></td><td><font color="Black">45/-</font></td>
+			</tr><tr bgcolor="#F7F7DE">
+				<td><font color="Black">Onions-I</font></td><td><font color="Black">40/-</font></td>
+			</tr><tr bgcolor="White">
+				<td><font color="Black">Potato</font></td><td><font color="Black">17/-</font></td>
+			</tr><tr bgcolor="#F7F7DE">
+				<td><font color="Black">Donda</font></td><td><font color="Black">35/-</font></td>
+			</tr><tr bgcolor="White">
+				<td><font color="Black">Carrot</font></td><td><font color="Black">47/-</font></td>
+			</tr><tr bgcolor="#F7F7DE">
+				<td><font color="Black">Cabbage</font></td><td><font color="Black">13/-</font></td>
+			</tr><tr bgcolor="White">
+				<td><font color="Black">Cauliflower</font></td><td><font color="Black">23/-</font></td>
+			</tr><tr bgcolor="#F7F7DE">
+				<td><font color="Black">Ribbed Gourd</font></td><td><font color="Black">38/-</font></td>
+			</tr><tr bgcolor="White">
+				<td><font color="Black">Bitter  Gourd</font></td><td><font color="Black">45/-</font></td>
+			</tr><tr bgcolor="#F7F7DE">
+				<td><font color="Black">Green Chillies</font></td><td><font color="Black">50/-</font></td>
+			</tr><tr bgcolor="White">
+				<td><font color="Black">Bhendi</font></td><td><font color="Black">55/-</font></td>
+			</tr><tr bgcolor="#F7F7DE">
+				<td><font color="Black">Brinjal</font></td><td><font color="Black">28/-</font></td>
+			</tr><tr bgcolor="White">
+				<td><font color="Black">Tomato</font></td><td><font color="Black">31/-</font></td>
+			</tr><tr bgcolor="#CCCC99">
+				<td><font color="Black">Vegetable</font></td><td><font color="Black">Our Rate</font></td>
+			</tr>
+		</table>
+	</div>
+     </marquee>
+                </div>
+            </div>
+        
+</div>
+    <div id="extras">
+        <img alt="" src="App_Themes/new.gif" style="background-color: #FFFFFF" /><br />
+        <a href="CircularnMeomos\RBZCSDashboard.xlsx" style="background-color: #FFFFFF; color: #0000FF;">
+            RythuBazars Information - Send it by 1:00 Pm Today
+
+        </a><br />
+        <span class="style2"><br />
+        For updating&nbsp;data please Click Here<a id="ctl00_ContentPlaceHolder1_LinkButton1" href="javascript:WebForm_DoPostBackWithOptions(new WebForm_PostBackOptions(&quot;ctl00$ContentPlaceHolder1$LinkButton1&quot;, &quot;&quot;, false, &quot;&quot;, &quot;Login.aspx&quot;, false, true))"><font color="#006600">Login</font></a><br />
+        <br />
+        <span id="ctl00_ContentPlaceHolder1_lblReported">07/10/2026</span>
+        <br />
+        <span id="ctl00_ContentPlaceHolder1_Label1"><font color="Black">User No : </font></span>
+        <br />
+        <br />
+        
+            
+            </a>
+        <br />
+        <br />
+        <br />
+        <br />
+            
+            
+                <!--<span class="style1">Agricultural Marketing 
+         Department Website<br />under Maintanance
+         </span>-->
+        <br />
+        <br />
+        <br />
+        </span>
+    </div>
+    <a>
+    <!-- <div style="background-position: center; height: 323px; width: 675px; background-image: url('Photos/PA240049.JPG'); background-repeat: no-repeat;" 
+        dir="rtl">  -->
+    <div id="ctl00_ContentPlaceHolder1_UpdatePanel2">
+	
+            <div id="center">
+                <span id="ctl00_ContentPlaceHolder1_Timer1" style="display:none;"></span>
+                
+                <img id="ctl00_ContentPlaceHolder1_Image1" src="PhotosMK/1.jpg" border="0" />
+            </div>
+        
+</div>
+    </a>
+
+    </div>
+    
+    <div id="footer">
+      Copyright &copy; 2010 Agricultural Marketing Department<br />        
+      Site is designed and Developed by  A.Praveen Kumar (Programmer)<br /> 
+      Email : <a href="mailto:praveen0015@gmail.com">praveen0015@gmail.com</a>
+    </div>
+    </div>
+        
+    
+
+<script type="text/javascript">
+//<![CDATA[
+var ctl00_Menu1_Data = new Object();
+ctl00_Menu1_Data.disappearAfter = 500;
+ctl00_Menu1_Data.horizontalOffset = 0;
+ctl00_Menu1_Data.verticalOffset = 0;
+ctl00_Menu1_Data.hoverClass = 'ctl00_Menu1_6';
+ctl00_Menu1_Data.hoverHyperLinkClass = 'ctl00_Menu1_5';
+Sys.Application.initialize();
+Sys.Application.add_init(function() {
+    $create(Sys.UI._Timer, {"enabled":true,"interval":300000,"uniqueID":"ctl00$ContentPlaceHolder1$Timer1"}, null, null, $get("ctl00_ContentPlaceHolder1_Timer1"));
+});
+//]]>
+</script>
+</form>
+    </body>
+</html>
