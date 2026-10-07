@@ -2,48 +2,103 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Rythu Bazar Prices</title>
     <meta name="description" content="Today's vegetable rates at Telangana Rythu Bazars, updated through the day." />
-    <meta name="theme-color" content="#1f5f3a" />
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥬</text></svg>" />
+    <meta name="theme-color" content="#ffd931" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1d1a1b" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23ffd931'/><text x='16' y='24' font-family='Arial' font-weight='900' font-size='20' text-anchor='middle' fill='%23231f20'>₹</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Anek+Telugu:wght@400..700&display=swap"
+    />
     <link rel="stylesheet" href="/styles.css" />
     <script src="/app.js" defer></script>
   </head>
   <body>
     <header class="top">
-      <div class="wrap">
-        <h1>Rythu Bazar Prices</h1>
-        <p class="sub" id="today">Telangana</p>
+      <div class="wrap top-inner">
+        <div class="eyebrow">
+          <span>Rythu Bazar Prices</span>
+          <span id="today"></span>
+        </div>
+
+        <button type="button" class="market-btn" id="market-btn" aria-haspopup="dialog" disabled>
+          <span class="market-name"><span id="market-name">Loading…</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg></span>
+          <span class="market-sub" id="market-sub">Finding bazars</span>
+        </button>
+
+        <p class="fresh" id="fresh" role="status" aria-live="polite"></p>
+
+        <div class="board" id="board" hidden></div>
       </div>
     </header>
 
-    <main class="wrap">
-      <section class="controls">
-        <label class="field">
-          <span>Market</span>
-          <select id="market" disabled>
-            <option>Loading markets…</option>
-          </select>
+    <div class="controls" id="controls" hidden>
+      <div class="wrap controls-inner">
+        <label class="search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
+          <span class="sr">Search vegetables</span>
+          <input id="search" type="search" placeholder="Search · టమాటా, onion, beans" autocomplete="off" enterkeyhint="search" />
         </label>
-        <label class="field">
-          <span>Search</span>
-          <input id="search" type="search" placeholder="Tomato, onion, beans…" autocomplete="off" />
-        </label>
-      </section>
+        <div class="chips" role="group" aria-label="Sort">
+          <button type="button" class="chip" data-sort="az">A–Z</button>
+          <button type="button" class="chip" data-sort="cheap">Cheapest first</button>
+          <button type="button" class="chip" data-sort="deals">Best deals here</button>
+        </div>
+      </div>
+    </div>
 
-      <p id="status" class="status" role="status" aria-live="polite"></p>
-
+    <main class="wrap main">
+      <div id="notice"></div>
       <ul id="prices" class="prices" aria-label="Prices"></ul>
-      <p id="empty" class="empty" hidden></p>
+      <p id="empty" class="card empty" hidden></p>
     </main>
 
     <footer class="wrap foot">
       <p>
-        Rates as published by the Telangana Agricultural Marketing Department's Rythu Bazar Information System, in ₹
-        (mostly per kg; a few items such as drumsticks may be per piece). Markets report through the morning, usually by
-        1 PM. Tap an item to compare it across markets.
+        <strong>Reading the strip:</strong> the line runs from the lowest to the highest rate across bazars that reported in the
+        last three days. The square is this bazar; the tick is the typical (middle) rate.
+      </p>
+      <p>
+        Rates as published by the Telangana Agricultural Marketing Department's Rythu Bazar Information System, in ₹ per kg.
+        A few items such as drumsticks and leafy greens are sold per piece or bunch, and bazars don't say which, so those
+        aren't compared. Bazars report through the morning, usually by 1 PM.
       </p>
     </footer>
+
+    <dialog id="compare" class="sheet" aria-labelledby="cmp-title">
+      <div class="sheet-grip" aria-hidden="true"></div>
+      <div class="sheet-head">
+        <div class="sheet-title">
+          <h2 id="cmp-title"></h2>
+          <span class="te" id="cmp-te"></span>
+        </div>
+        <button type="button" class="icon-btn" data-close aria-label="Close">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+      </div>
+      <div class="sheet-body" id="cmp-body"></div>
+    </dialog>
+
+    <dialog id="markets" class="sheet" aria-labelledby="mk-title">
+      <div class="sheet-grip" aria-hidden="true"></div>
+      <div class="sheet-head">
+        <div class="sheet-title"><h2 id="mk-title">Pick your bazar</h2></div>
+        <button type="button" class="icon-btn" data-close aria-label="Close">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+      </div>
+      <div class="sheet-search">
+        <label class="search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
+          <span class="sr">Search bazars</span>
+          <input id="mk-search" type="search" placeholder="Search bazars or districts" autocomplete="off" />
+        </label>
+      </div>
+      <div class="sheet-body" id="mk-body"></div>
+    </dialog>
   </body>
 </html>

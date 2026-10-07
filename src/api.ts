@@ -61,17 +61,41 @@ async function prices(env: ApiEnv, url: URL) {
     .first<{ id: number; name: string; district: string; lastCheckedAt: string | null; latestDate: string | null }>();
   if (!market) return json({ error: "unknown market" }, 404, 0);
 
-  const items = market.latestDate
-    ? (
-        await env.DB.prepare(
-          `SELECT item, price, updated_at AS updatedAt FROM prices
-            WHERE market_id = ?1 AND date = ?2 ORDER BY item`,
-        )
-          .bind(marketId, market.latestDate)
-          .all<{ item: string; price: number; updatedAt: string }>()
-      ).results
-    : [];
   const today = istDate(new Date());
+  if (!market.latestDate) {
+    return json({
+      market: { id: market.id, name: market.name, district: market.district, lastCheckedAt: market.lastCheckedAt },
+      date: null,
+      isToday: false,
+      today,
+      items: [],
+    });
+  }
+
+  const [own, spread] = await env.DB.batch([
+    env.DB.prepare(
+      `SELECT item, price, updated_at AS updatedAt FROM prices
+        WHERE market_id = ?1 AND date = ?2 ORDER BY item`,
+    ).bind(marketId, market.latestDate),
+    // Every active market's latest table within the same window /api/item uses.
+    env.DB.prepare(
+      `WITH latest AS (
+         SELECT p.market_id, MAX(p.date) AS date
+           FROM prices p JOIN markets m ON m.id = p.market_id AND m.active = 1
+          WHERE p.date >= ?1
+          GROUP BY p.market_id)
+       SELECT p.item, GROUP_CONCAT(p.price) AS prices
+         FROM prices p JOIN latest l ON l.market_id = p.market_id AND l.date = p.date
+        GROUP BY p.item`,
+    ).bind(istDate(new Date(Date.now() - 3 * 86_400_000))),
+  ]);
+  const stats = new Map(
+    (spread.results as { item: string; prices: string }[]).map((r) => [r.item, priceStats(r.prices)]),
+  );
+  const items = (own.results as { item: string; price: number; updatedAt: string }[]).map((i) => ({
+    ...i,
+    stats: stats.get(i.item) ?? null,
+  }));
   return json({
     market: { id: market.id, name: market.name, district: market.district, lastCheckedAt: market.lastCheckedAt },
     date: market.latestDate,
@@ -79,6 +103,17 @@ async function prices(env: ApiEnv, url: URL) {
     today,
     items,
   });
+}
+
+/** Spread of one item's price across markets, from a GROUP_CONCAT list. */
+export function priceStats(csv: string) {
+  const ps = csv
+    .split(",")
+    .map(Number)
+    .sort((a, b) => a - b);
+  const mid = ps.length >> 1;
+  const median = ps.length % 2 ? ps[mid] : (ps[mid - 1] + ps[mid]) / 2;
+  return { min: ps[0], max: ps[ps.length - 1], median, markets: ps.length };
 }
 
 /** One item across all markets, using each market's latest date within the last 3 days. */
