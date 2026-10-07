@@ -123,9 +123,82 @@ The scraper's location matters more than the host:
 4. Save a snapshot on every scrape (`market, item, price, scraped_at`). Show "last updated" per market, keep the last good value, and build history and trends over time.
 5. Risk: rbzts may block datacenter or non-Indian IPs. GitHub runners are in the US. Test early; if it's blocked, use a self-hosted runner or an Indian-region host.
 
+## Andhra Pradesh (researched 2026-10-07, ~20:00 IST)
+
+### TL;DR
+
+- **AP has its own copy of rbzts, `http://117.192.9.10/rbzap/`, but it is down.** It refused connections from Sunny's broadband (curl and Chrome) and from mobile data. The AP Agricultural Marketing Dept links to it as "Click here for Rythu Bazar Prices". From our network, ports 80 and 443 both refused (`Connection refused`), while rbzts answered 200 in the same run. The Wayback Machine has no snapshot of it. It was alive at some point: Tilicho's "Rythu Bazaar" iOS app (last updated Oct 2020) listed "~96 Rytu bazaars in AP and 39 in Telangana" from "a govt portal".
+- **The only live per-bazar AP prices are on Digi Rythu Bazaar** (`digirythubazaarap.com`), the AP govt's online Rythu Bazar shop built with Machint Solutions. It covers **15 units**: 12 in Visakhapatnam and 1 each in Vijayawada, Tirupati and Guntur. Each store has its own prices for ~40 vegetables, mostly ₹/kg. These are online-shop prices with no date, not the bazar's daily board.
+- **Agmarknet has no AP Rythu Bazars.** It lists 220 AP markets, none of them Rythu Bazars. They are wholesale APMC markets (₹/quintal), ~2 days behind.
+- **Recommendation:** no full AP source exists today. The choices are a thin, mostly-Vizag "beta" from Digi Rythu Bazaar, or asking the AP Agricultural Marketing Dept whether rbzap has moved (see "Next step").
+
+### Sources compared
+
+| Source | Coverage | Units | Freshness | Access | Verdict |
+|---|---|---|---|---|---|
+| **rbzap** (`117.192.9.10/rbzap/`) | AP's ~101 Rythu Bazars (the dept page says 101; 2026 news cites 115–130 incl. counters) | Presumably the same as rbzts (retail ₹/kg) | Presumably same-day | **Down: connection refused** from broadband and mobile (7 Oct 2026) | Primary if it comes back |
+| **Digi Rythu Bazaar** (`digirythubazaarap.com`) | 15 units: Vizag 12, Vijayawada (Patamata) 1, Tirupati 1, Guntur (Krishnanagar) 1 | Online sale price. Of 111 items with a unit: 82 kg, 28 piece, 1 bunch | Current only, no date shown | Server-rendered HTML, store picked by cookie; no prices API | Fallback "beta" only |
+| Agmarknet 2.0 | 220 AP APMC markets, **0 Rythu Bazars** | Wholesale ₹/quintal | ~2 days behind (a statewide query on 7 Oct returned 12 rows dated 05-10) | Public JSON | Skip |
+| CM App (`cmapp.ap.gov.in`) | AMC procurement and farm-gate price monitoring | — | — | Department login + captcha | Skip |
+| vegetablemarketprice.com, OneIndia, commodityonline | One statewide figure, or republished Agmarknet | Mixed | Daily | No source given | Skip |
+| Visakhapatnam district site | A single PDF of Rythu Bazar prices, dated Aug 2021 | — | Stale | — | Skip |
+| Telugu/English news | Occasional articles on price spikes, no daily lists | — | — | — | Skip |
+
+### rbzap details
+
+- Linked from https://vyavasayamarketingshakha.ap.gov.in/agriMrkt/Dashboard/rythu-bazars.html (marquee: "Click here for Rythu Bazar Prices"). The name and path mirror rbzts (`183.82.5.184/rbzts/`), so it is very likely the same ASP.NET app. If it comes back, the existing scraper should need little more than a different base URL and district/market IDs.
+- `117.192.x.x` is a BSNL range. The refusal came back in ~30 ms (rbzts took ~130 ms for a full response). A fast refusal could mean the server is down, the port is closed, or something filters our network. Chrome on the same machine also got `ERR_CONNECTION_REFUSED` (7 Oct, 20:20 IST), and so did a phone on mobile data. **Treat it as down.**
+- The same page says each bazar's prices are fixed every morning by a committee (the Estate Officer plus 2–3 farmers): **25% above wholesale and 25% below local retail**. That's the same scheme as Telangana, so the numbers would be comparable.
+
+### Second sweep (7 Oct, ~20:25 IST): no other public per-bazar source
+
+- **Older link to rbzap on the Telangana server:** the West Godavari district page links `http://183.82.5.184/rbzap`, the same server as rbzts. It returns 404 (as do `HomePage.aspx` and `Default.aspx`), so it was removed. A hint about the history: rbzts district IDs start at 14 (Mahbubnagar), with the 10 old TG districts at 14–23. That suggests IDs 1–13 were the 13 AP districts when this was one combined system. We did not try to post hidden dropdown values: ASP.NET event validation would reject them, and any AP rows would be years old.
+- `market.ap.nic.in` (the old department site) doesn't answer.
+- **Official AP apps are internal:** "Agricultural Marketing" (APCFSS, updated Aug 2026) is for market committees and check posts. "Rythu Bazar" (Dreamstep Software Innovations, updated Oct 2022) is "built for employees of Rythubazar in AP": stalls, rent, master data. **If AP still records daily prices digitally, they are probably in a staff system like this, not in public.**
+- **Consumer Affairs price monitoring** (`fcainfoweb.nic.in`): the report page needs a captcha. Since Sept 2023 it publishes only state and national averages, no per-centre figures (per CEDA/Ashoka's mirror). Only tomato, onion and potato among vegetables. Not usable per bazar.
+- **Agmarknet:** none of the 60 markets named like "bazar" or "RBZ" are in AP. All Rythu Bazar entries are Telangana.
+- **Third-party "Vijayawada vegetable prices" pages** (amaravativoice: last updated 2016; goldenchennai, vegetablemarketprice, OneIndia): no stated source, one city-level figure.
+
+### Digi Rythu Bazaar details
+
+- Bazar list: `GET https://digirythubazaarap.com/rb`, or `GET https://drb-api-prod-fbeshza3b0bqf0b6.southindia-01.azurewebsites.net/RB/nearest/{lat}/{lng}`. The latter returns JSON: `id` (GUID), `unitCode` (e.g. `RB-VIZAG-01`), name, address, lat/lng, weekly off day.
+- Prices: `GET /Products?category=Vegetables` with cookie `NearestRbId=<id>`. That returns ~1.2 MB of HTML. Each card carries `data-product-name`, `data-category`, `data-farming`, `data-telugu` (Telugu name included), `data-unit` and the price. `/products` on the API host returns 404.
+- Prices really do differ per store. On 7 Oct, MVP (Vizag) vs Tirupati: potato 12 vs 28, carrot 40 vs 65, tomato 40 vs 35, onion 50 vs 57.
+- **Caveats:** these are shop prices. The govt says they match the bazar's committee price, but we can't verify that. There's no date, so we'd stamp each scrape ourselves (same as rbzts). The ~1.2 MB page per store is heavy for the free plan's 10 ms CPU limit, so fetch one store per tick and use a lean regex. The site has no `robots.txt`. Coverage is mostly Visakhapatnam.
+
+### If we add AP: same Worker + D1, not a separate deploy
+
+- **IDs collide.** `districts.id` and `markets.id` are the raw rbzts dropdown values, and rbzap almost certainly reuses small integers too. Options: add `source TEXT` (`rbzts` | `rbzap` | `digirb`) and give AP rows offset IDs (e.g. +10000), keeping the source's own ID in a separate column. Or make keys `(source, source_id)`. The offset approach keeps every existing query and index unchanged.
+- Add `state TEXT NOT NULL DEFAULT 'TG'` to `districts`. The overview and the UI then filter by state: a "Telangana / Andhra Pradesh" switch, with the default state remembered or guessed from location.
+- **Separate source modules** (`src/scraper/rbzts.ts`, `rbzap.ts`, `digirb.ts`) behind the same planner, fetch budget and lock. Item names need mapping into the shared item list (Digi uses e.g. "lady finger / bhindi", "ivy gourd"; rbzts uses "Bhendi", "Donda").
+- **Budget:** rbzap at ~101 bazars × ~3 requests ≈ 300 fetches per full round, vs ~120 for rbzts. That fits the ~108 cron ticks/day × 35 fetches (≈ 3.8k/day), but each bazar would be refreshed less often. D1 writes ~2.5×, still far under 100k/day. Overview reads grow with market count, so filter by state.
+
+### Next step
+
+1. ~~Check whether rbzap is up from another network~~. Done: down on broadband and on mobile data (7 Oct).
+2. Ask the AP Agricultural Marketing Dept (@AMD_AP) whether the Rythu Bazar price portal moved. Meanwhile, decide whether a 15-store Digi Rythu Bazaar "AP beta" is worth building.
+3. If both stay unattractive, look at the all-India option (Consumer Affairs retail + Agmarknet).
+
+## Search terms & domain (Google Trends, 2026-10-07)
+
+Telangana, last 5 years, from the Trends explore and widget APIs. All numbers are relative; 0 means too small to register, not literally zero.
+
+- **Head terms are about equal:** "rythu bazar" ≈ 45, "vegetable market" ≈ 51, "mandi price" ≈ 47 (the farmer/wholesale side). "farmers market" 5. Wholesale market names: Bowenpally 30, Monda 14, Gudimalkapur 13.
+- **Spelling:** "rythu bazar" by a wide margin. "rythu bazaar", "raithu bazar", "rythubazar", Telugu script (రైతు బజార్, కూరగాయల ధరలు), "kuragayala dharalu", "sabzi/sabji mandi" all ≈ 0.
+- **People say "rates", not "prices", and add "today".** Top related queries for "rythu bazar" in TG: "rythu bazar **rates**" 100, "rythu bazar hyderabad" 96, "near me" 62, "kukatpally rythu bazar" 56, "rythu bazar rates today" 55, "today rythu bazar vegetable rates" 32 (rising +80%), "rythu bazar prices today" 29. Head-to-head, "rythu bazar rates" 3 vs "rythu bazar prices" 1. For "vegetable rates" the top query is "vegetable rates today", and "today vegetable rates telugu" is rising.
+- **AP searches more than TG** ("rythu bazar": AP 100, Telangana 71). AP's top queries: "rythu bazar rates" 100, "rythu bazar rates today" 68, "rythu bazar vijayawada" 51; "digi rythu bazar" is a breakout.
+- **Tomato is the item people search:** "tomato price hyderabad", "today tomato price", "kg tomato price today". "why tomato price increased" is a breakout.
+- **SEO implication:** say "Rythu Bazar rates today" in the title and H1. Give each bazar its own page ("Kukatpally Rythu Bazar rates today") and each item its own page ("Tomato price today Hyderabad").
+
+**Domains** (RDAP, 7 Oct): `rythubazar.com` and `rythubazar.in` are taken. Available: `rythubazarrates.{com,in,app}`, `rythubazars.{com,in,app}`, `rythubazar.app`, `rythubazartoday.{com,in}`, `vegetablerates.{com,in}`, `eerojurates.{com,in}`, `bazarrates.{com,in}`. Cloudflare Registrar reportedly doesn't sell `.in`, so buy `.in` elsewhere and point its nameservers at Cloudflare. That's safe for a fresh domain because there are no existing records to copy.
+
 ## Sources
 
 - rbzts: http://183.82.5.184/rbzts/
+- rbzap (AP, refused): http://117.192.9.10/rbzap/ (linked from https://vyavasayamarketingshakha.ap.gov.in/agriMrkt/Dashboard/rythu-bazars.html)
+- Digi Rythu Bazaar AP: https://digirythubazaarap.com/rb · launch coverage: https://www.amazingap.com/2025/12/ap-digi-rythu-bazar-farm-fresh-produce.html
+- Tilicho "Rythu Bazaar" app (AP 96 / TG 39 bazars, 2020): https://apps.apple.com/us/app/rythu-bazaar/id1438643204
+- AP CM App: https://cmapp.ap.gov.in/
 - Agmarknet 2.0: https://agmarknet.gov.in/
 - data.gov.in dataset: https://data.gov.in/resource/current-daily-price-various-commodities-various-markets-mandi
 - Cloudflare D1 pricing: https://developers.cloudflare.com/d1/platform/pricing/
