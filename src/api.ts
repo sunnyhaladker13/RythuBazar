@@ -81,7 +81,7 @@ async function prices(env: ApiEnv, url: URL) {
     env.DB.prepare(
       `${LATEST}
        SELECT p.item, GROUP_CONCAT(p.price) AS prices
-         FROM prices p JOIN latest l ON l.market_id = p.market_id AND l.date = p.date
+         FROM latest l CROSS JOIN prices p ON p.market_id = l.market_id AND p.date = l.date
         GROUP BY p.item`,
     ).bind(windowStart()),
   ]);
@@ -101,12 +101,15 @@ async function prices(env: ApiEnv, url: URL) {
   });
 }
 
-/** Every active market's latest price table within the window /api/item also uses. */
+/**
+ * Every active market's latest price table within the window /api/item also uses.
+ * Read from markets.last_reported_date (kept by the scraper) rather than MAX(date) over
+ * prices: that would scan all of history on every page view and burn D1's free read quota.
+ */
 const LATEST = `WITH latest AS (
-  SELECT p.market_id, MAX(p.date) AS date
-    FROM prices p JOIN markets m ON m.id = p.market_id AND m.active = 1
-   WHERE p.date >= ?1
-   GROUP BY p.market_id)`;
+  SELECT id AS market_id, last_reported_date AS date
+    FROM markets
+   WHERE active = 1 AND last_reported_date >= ?1)`;
 const windowStart = () => istDate(new Date(Date.now() - 3 * 86_400_000));
 
 /** All bazars at once: each item's typical price, range and where it's cheapest. */
@@ -116,8 +119,9 @@ async function overview(env: ApiEnv) {
     env.DB.prepare(
       `${LATEST}
        SELECT p.item, p.price, m.name AS market
-         FROM prices p
-         JOIN latest l ON l.market_id = p.market_id AND l.date = p.date
+         FROM latest l
+        -- CROSS JOIN pins the order: 40 markets, then a primary-key lookup each (no prices scan).
+        CROSS JOIN prices p ON p.market_id = l.market_id AND p.date = l.date
          JOIN markets m ON m.id = p.market_id
         ORDER BY p.item, p.price, m.name`,
     ).bind(windowStart()),
