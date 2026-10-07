@@ -1,6 +1,29 @@
+# Dependencies and build output
 node_modules/
+dist/
+coverage/
+
+# Wrangler local state (local D1, caches)
 .wrangler/
+
+# Secrets — never commit (ADMIN_TOKEN lives in .dev.vars)
 .dev.vars
+.dev.vars.*
+.env
+.env.*
+
+# Scraper prototype output
 rbzts_snapshot.json
 __pycache__/
+
+# render-og.mjs intermediate (only og.jpg is committed)
+public/og.png
+
+# Logs and OS/editor clutter
+*.log
+.DS_Store
+.vscode/
+.idea/
+
+# Local handoff pointer
 .handoff-config
