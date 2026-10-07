@@ -12,7 +12,9 @@ const els = {
   board: $("board"),
   controls: $("controls"),
   search: $("search"),
-  bazarChip: $("bazar-chip"),
+  scope: $("scope"),
+  scopeValue: $("scope-value"),
+  scopeAction: $("scope-action"),
   dealsChip: document.querySelector('[data-sort="deals"]'),
   notice: $("notice"),
   prices: $("prices"),
@@ -131,8 +133,8 @@ async function init() {
 
   els.search.addEventListener("input", render);
   els.mkSearch.addEventListener("input", renderMarkets);
-  els.bazarChip.addEventListener("click", openMarkets);
-  els.bazarChip.disabled = !state.all.length;
+  els.scope.addEventListener("click", openMarkets);
+  els.scope.disabled = !state.all.length;
   els.back.addEventListener("click", () => go(null));
   for (const chip of document.querySelectorAll("[data-sort]")) {
     chip.addEventListener("click", () => {
@@ -187,7 +189,8 @@ async function showAll() {
   els.dealsChip.hidden = true;
   if (state.sort === "deals") state.sort = "az";
   els.title.textContent = "Today's rates";
-  els.sub.textContent = "Typical prices across Telangana's Rythu Bazars";
+  els.sub.textContent = "Typical prices across all Rythu Bazars";
+  setScope(`All ${state.all.length} bazars`, "Choose a bazar");
   document.title = "Rythu Bazar Prices";
   setFresh("Loading rates…");
   resetView();
@@ -239,6 +242,7 @@ async function showMarket(id) {
   els.dealsChip.hidden = false;
   els.title.textContent = m?.name ?? "…";
   els.sub.textContent = m?.district ?? "";
+  setScope(`${m?.name ?? "One bazar"} only`, "Change");
   setFresh("Loading rates…");
   resetView();
 
@@ -667,6 +671,12 @@ function renderMarkets() {
         ].filter(Boolean)
       : [el("p", { className: "sheet-msg", textContent: `No bazar matches “${els.mkSearch.value.trim()}”.` })]),
   );
+}
+
+function setScope(value, action) {
+  els.scopeValue.textContent = value;
+  els.scopeAction.firstChild.textContent = action;
+  els.scope.ariaLabel = `Showing ${value}. ${action}`;
 }
 
 function setFresh(text, stale = false) {

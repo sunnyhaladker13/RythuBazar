@@ -30,8 +30,16 @@
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>All bazars
           </button>
           <h1 class="market-name" id="title">Today's rates</h1>
-          <p class="market-sub" id="sub">Typical prices across Telangana's Rythu Bazars</p>
+          <p class="market-sub" id="sub">Typical prices across all Rythu Bazars</p>
         </div>
+
+        <button type="button" class="scope" id="scope" aria-haspopup="dialog" disabled>
+          <span class="scope-what">
+            <span class="scope-label">Showing</span>
+            <span class="scope-value" id="scope-value">All bazars</span>
+          </span>
+          <span class="scope-action" id="scope-action">Choose a bazar<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg></span>
+        </button>
 
         <p class="fresh" id="fresh" role="status" aria-live="polite"></p>
 
@@ -50,9 +58,6 @@
           <button type="button" class="chip" data-sort="az">A–Z</button>
           <button type="button" class="chip" data-sort="cheap">Cheapest first</button>
           <button type="button" class="chip" data-sort="deals" hidden>Best deals here</button>
-          <button type="button" class="chip chip-bazar" id="bazar-chip" aria-haspopup="dialog" disabled>
-            One bazar<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
-          </button>
         </div>
       </div>
     </div>
@@ -92,7 +97,7 @@
     <dialog id="markets" class="sheet" aria-labelledby="mk-title">
       <div class="sheet-grip" aria-hidden="true"></div>
       <div class="sheet-head">
-        <div class="sheet-title"><h2 id="mk-title">Bazars</h2></div>
+        <div class="sheet-title"><h2 id="mk-title">Choose a bazar</h2></div>
         <button type="button" class="icon-btn" data-close aria-label="Close">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
         </button>
