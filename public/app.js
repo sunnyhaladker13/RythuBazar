@@ -1,15 +1,19 @@
 // Rythu Bazar Prices — vanilla client for /api/*.
+// Default view: every bazar at once (typical price, range, where it's cheapest).
+// ?market=<id> narrows to one bazar.
 
 const $ = (id) => document.getElementById(id);
 const els = {
   today: $("today"),
-  marketBtn: $("market-btn"),
-  marketName: $("market-name"),
-  marketSub: $("market-sub"),
+  back: $("back"),
+  title: $("title"),
+  sub: $("sub"),
   fresh: $("fresh"),
   board: $("board"),
   controls: $("controls"),
   search: $("search"),
+  bazarChip: $("bazar-chip"),
+  dealsChip: document.querySelector('[data-sort="deals"]'),
   notice: $("notice"),
   prices: $("prices"),
   empty: $("empty"),
@@ -100,48 +104,37 @@ async function api(path) {
 
 const state = {
   today: null,
-  districts: [],
-  all: [], // flat markets with district name
-  current: null, // /api/prices response
+  all: [], // flat bazars with district name
+  market: null, // null = all bazars; else the /api/prices market
+  current: null, // { date, isToday, items } with items as { item, price, stats, cheapest? }
   sort: store.get("rbz.sort") ?? "az",
 };
+
+const reportedToday = (m) => m.lastReportedDate === state.today;
 
 // ---------- Boot ----------
 
 async function init() {
+  try {
+    localStorage.removeItem("rbz.market"); // the old "remember my bazar" default
+  } catch {}
   let data;
   try {
     data = await api("/api/markets");
   } catch {
-    setFresh("Couldn't load bazars. Check your connection and refresh.", true);
-    els.marketName.textContent = "Offline";
-    els.marketSub.textContent = "";
+    setFresh("Couldn't load rates. Check your connection and refresh.", true);
     return;
   }
   state.today = data.today;
-  state.districts = data.districts;
   state.all = data.districts.flatMap((d) => d.markets.map((m) => ({ ...m, district: d.name })));
   els.today.textContent = fmtDate(data.today);
 
-  if (!state.all.length) {
-    els.marketName.textContent = "No bazars yet";
-    els.marketSub.textContent = "";
-    setFresh("Prices haven't been collected yet. Check back shortly.", true);
-    return;
-  }
-
-  const fromUrl = new URLSearchParams(location.search).get("market");
-  const saved = store.get("rbz.market");
-  const known = (id) => id && state.all.some((m) => String(m.id) === id);
-  const reporting = state.all.filter(reportedToday);
-  const fallback = reporting.find((m) => m.name === "Mehdipatnam") ?? reporting[0] ?? state.all[0];
-  const start = known(fromUrl) ? fromUrl : known(saved) ? saved : String(fallback.id);
-
-  els.marketBtn.disabled = false;
-  els.marketBtn.addEventListener("click", openMarkets);
   els.search.addEventListener("input", render);
   els.mkSearch.addEventListener("input", renderMarkets);
-  for (const chip of document.querySelectorAll(".chip")) {
+  els.bazarChip.addEventListener("click", openMarkets);
+  els.bazarChip.disabled = !state.all.length;
+  els.back.addEventListener("click", () => go(null));
+  for (const chip of document.querySelectorAll("[data-sort]")) {
     chip.addEventListener("click", () => {
       state.sort = chip.dataset.sort;
       store.set("rbz.sort", state.sort);
@@ -154,39 +147,116 @@ async function init() {
       if (e.target === dlg || e.target.closest("[data-close]")) dlg.close();
     });
   }
-  selectMarket(start, { replace: true });
+  window.addEventListener("popstate", () => show(urlMarket()));
+  show(urlMarket());
 }
 
-const reportedToday = (m) => m.lastReportedDate === state.today;
+function urlMarket() {
+  const id = new URLSearchParams(location.search).get("market");
+  return id && state.all.some((m) => String(m.id) === id) ? id : null;
+}
 
-// ---------- Market ----------
-
-async function selectMarket(id, { replace = false } = {}) {
-  store.set("rbz.market", id);
+/** Navigate to all bazars (null) or one bazar, keeping the URL shareable. */
+function go(id) {
   const url = new URL(location.href);
-  url.searchParams.set("market", id);
-  history[replace ? "replaceState" : "pushState"](null, "", url);
+  if (id) url.searchParams.set("market", id);
+  else url.searchParams.delete("market");
+  history.pushState(null, "", url);
+  els.search.value = "";
+  show(id);
+  scrollTo({ top: 0 });
+}
 
-  const m = state.all.find((x) => String(x.id) === id);
-  els.marketName.textContent = m?.name ?? "…";
-  els.marketSub.textContent = m ? `${m.district} · tap to change bazar` : "";
-  setFresh("Loading rates…");
+function show(id) {
+  return id ? showMarket(id) : showAll();
+}
+
+function resetView() {
   els.notice.replaceChildren();
   els.prices.replaceChildren();
   els.board.hidden = true;
   els.empty.hidden = true;
+  els.prices.classList.remove("old");
+}
 
+// ---------- All bazars ----------
+
+async function showAll() {
+  state.market = null;
+  els.back.hidden = true;
+  els.dealsChip.hidden = true;
+  if (state.sort === "deals") state.sort = "az";
+  els.title.textContent = "Today's rates";
+  els.sub.textContent = "Typical prices across Telangana's Rythu Bazars";
+  document.title = "Rythu Bazar Prices";
+  setFresh("Loading rates…");
+  resetView();
+
+  let data;
   try {
-    state.current = await api(`/api/prices?market=${encodeURIComponent(id)}`);
+    data = await api("/api/overview");
+  } catch {
+    state.current = null;
+    setFresh("Couldn't load rates. Try again in a bit.", true);
+    return;
+  }
+  if (state.market) return; // navigated away meanwhile
+  const checked = data.lastCheckedAt ? ` · checked ${timeFmt.format(new Date(data.lastCheckedAt))}` : "";
+  state.current = {
+    date: data.today,
+    isToday: true,
+    items: data.items.map((i) => ({
+      item: i.item,
+      price: i.median,
+      stats: { min: i.min, max: i.max, median: i.median, markets: i.markets },
+      cheapest: i.cheapest,
+    })),
+  };
+  if (!data.items.length) {
+    setFresh(`No bazar has posted rates yet${checked}`, true);
+    els.notice.replaceChildren(
+      el(
+        "div",
+        { className: "card notice" },
+        el("h2", { textContent: "No rates yet" }),
+        el("p", { textContent: "Bazars usually post rates by 1 PM. This page fills in on its own as they do." }),
+      ),
+    );
+  } else {
+    setFresh(`${data.reportedToday} of ${data.markets} bazars reported today${checked}`, data.reportedToday === 0);
+  }
+  els.controls.hidden = !data.items.length;
+  renderBoard();
+  render();
+}
+
+// ---------- One bazar ----------
+
+async function showMarket(id) {
+  const m = state.all.find((x) => String(x.id) === id);
+  state.market = m ?? { id: Number(id) };
+  els.back.hidden = false;
+  els.dealsChip.hidden = false;
+  els.title.textContent = m?.name ?? "…";
+  els.sub.textContent = m?.district ?? "";
+  setFresh("Loading rates…");
+  resetView();
+
+  let data;
+  try {
+    data = await api(`/api/prices?market=${encodeURIComponent(id)}`);
   } catch {
     state.current = null;
     setFresh("Couldn't load rates for this bazar. Try again in a bit.", true);
     return;
   }
-  const { date, isToday, market, items } = state.current;
+  if (String(state.market?.id) !== id) return; // navigated away meanwhile
+  state.market = data.market;
+  state.current = data;
+  const { date, isToday, market, items } = data;
   document.title = `${market.name} · Rythu Bazar Prices`;
   const checked = market.lastCheckedAt ? ` · checked ${timeFmt.format(new Date(market.lastCheckedAt))}` : "";
-  els.marketSub.textContent = `${market.district}${items.length ? ` · ${plural(items.length, "item")}` : ""} · tap to change bazar`;
+  els.sub.textContent = `${market.district}${items.length ? ` · ${plural(items.length, "item")}` : ""}`;
 
   if (!date || !items.length) {
     setFresh(`No rates yet today${checked}`, true);
@@ -204,7 +274,7 @@ async function selectMarket(id, { replace = false } = {}) {
       ),
     );
   }
-  els.controls.hidden = !items.length;
+  els.controls.hidden = !items.length && !state.all.length;
   els.prices.classList.toggle("old", Boolean(date) && !isToday);
   renderBoard();
   render();
@@ -234,7 +304,7 @@ function notReported(market) {
           ...picks.map((m) =>
             el(
               "button",
-              { type: "button", className: "nearby-btn", onclick: () => selectMarket(String(m.id)) },
+              { type: "button", className: "nearby-btn", onclick: () => go(String(m.id)) },
               el(
                 "span",
                 { className: "what" },
@@ -249,14 +319,21 @@ function notReported(market) {
   );
 }
 
-// ---------- Price comparisons ----------
+// ---------- Verdicts ----------
 
-/** How this bazar's price sits against every bazar's latest price for the item. */
+const comparable = (i) => i.stats && i.stats.markets > 1 && !UNIT_VARIES.has(i.item);
+
+/** One line under the item name. All bazars: where it's cheapest. One bazar: how it compares. */
 function verdict(i) {
   const s = i.stats;
-  if (!s || s.markets < 2 || UNIT_VARIES.has(i.item)) return null;
+  if (!comparable(i)) return null;
   const n = `${s.markets} bazars`;
   if (s.min === s.max) return { tone: "plain", text: `Same price at all ${n}` };
+  if (!state.market) {
+    const c = i.cheapest ?? [];
+    const where = c.length === 1 ? c[0] : `${c.length} bazars`;
+    return { tone: "plain", text: `Cheapest ${rupees(s.min)} at ${where}` };
+  }
   if (i.price <= s.min) return { tone: "good", text: `Lowest of ${n}` };
   if (i.price >= s.max) return { tone: "bad", text: `Highest of ${n}` };
   const diff = i.price - s.median;
@@ -269,7 +346,7 @@ function verdict(i) {
 function compareDeals(a, b) {
   const key = (i) => {
     const s = i.stats;
-    if (!s || s.markets < 2 || UNIT_VARIES.has(i.item)) return [Infinity, Infinity, 0];
+    if (!comparable(i)) return [Infinity, Infinity, 0];
     const span = s.max - s.min || 1;
     return [(i.price - s.median) / s.median, (i.price - s.min) / span, (s.max - i.price) / s.max];
   };
@@ -278,21 +355,30 @@ function compareDeals(a, b) {
   return a1 - b1 || a2 - b2 || b3 - a3;
 }
 
+// ---------- Rendering ----------
+
 function renderBoard() {
   const items = state.current?.items ?? [];
   const tiles = STAPLES.map(([key, label]) => {
     const i = items.find((x) => x.item === key);
     if (!i) return null;
-    const v = verdict(i);
     const s = i.stats;
-    const note = s && s.markets > 1 ? `${v?.tone === "good" ? "low" : v?.tone === "bad" ? "high" : "typical"} · ${rupees(s.min)}–${money(s.max)}` : "per kg";
+    let note = "per kg";
+    if (s && s.markets > 1) {
+      const range = `${rupees(s.min)}–${money(s.max)}`;
+      if (!state.market) note = `typical · ${range}`;
+      else {
+        const v = verdict(i);
+        note = `${v?.tone === "good" ? "low" : v?.tone === "bad" ? "high" : "typical"} · ${range}`;
+      }
+    }
     return el(
       "button",
       {
         type: "button",
         className: "staple",
         onclick: () => openCompare(i),
-        ariaLabel: `${label} ${rupees(i.price)} per kg. Compare bazars`,
+        ariaLabel: `${label} ${rupees(i.price)} per kg${state.market ? "" : " typical"}. Compare bazars`,
       },
       el("span", { className: "label", textContent: label }),
       el("span", { className: "te", textContent: info(key).te }),
@@ -305,7 +391,7 @@ function renderBoard() {
 }
 
 function render() {
-  for (const chip of document.querySelectorAll(".chip")) {
+  for (const chip of document.querySelectorAll("[data-sort]")) {
     chip.setAttribute("aria-pressed", String(chip.dataset.sort === state.sort));
   }
   if (!state.current) return;
@@ -328,11 +414,20 @@ function row(i) {
   const { en, te, color } = info(i.item);
   const v = verdict(i);
   const s = i.stats;
-  const showStrip = s && s.markets > 1 && s.max > s.min && !UNIT_VARIES.has(i.item);
-  const pos = (p) => `${((p - s.min) / (s.max - s.min)) * 100}%`;
   const unitVaries = UNIT_VARIES.has(i.item);
+  const showStrip = comparable(i) && s.max > s.min;
+  const pos = (p) => `${((p - s.min) / (s.max - s.min)) * 100}%`;
+  // Mixed units make a single typical price meaningless across bazars, so show the range instead.
+  const priceText = !state.market && unitVaries && s && s.max > s.min ? `${rupees(s.min)}–${money(s.max)}` : rupees(i.price);
 
-  const label = [en, `${rupees(i.price)}${unitVaries ? "" : " per kg"}`, v?.text, "Compare bazars"].filter(Boolean).join(". ");
+  const label = [
+    en,
+    `${priceText}${unitVaries ? "" : " per kg"}${state.market ? "" : " typical"}`,
+    v?.text,
+    "Compare bazars",
+  ]
+    .filter(Boolean)
+    .join(". ");
   return el(
     "li",
     {},
@@ -351,12 +446,17 @@ function row(i) {
       el(
         "span",
         { className: "cost" },
-        el("span", { className: "num" }, rupees(i.price), unitVaries ? null : el("span", { className: "unit", textContent: "/kg" })),
+        el(
+          "span",
+          { className: `num${priceText.length > 5 ? " small" : ""}` },
+          priceText,
+          unitVaries ? null : el("span", { className: "unit", textContent: "/kg" }),
+        ),
         showStrip
           ? el(
               "span",
               { className: "strip", ariaHidden: "true" },
-              el("span", { className: "tick", style: `left:${pos(s.median)}` }),
+              state.market ? el("span", { className: "tick", style: `left:${pos(s.median)}` }) : null,
               el("span", { className: "dot", style: `left:${pos(i.price)}` }),
             )
           : null,
@@ -380,6 +480,8 @@ function inkOn(hex) {
   return lum > 0.6 ? "#231f20" : "#ffffff";
 }
 
+// ---------- Compare sheet ----------
+
 async function openCompare(i) {
   const { en, te } = info(i.item);
   els.cmpTitle.textContent = en;
@@ -393,7 +495,7 @@ async function openCompare(i) {
     els.cmpBody.replaceChildren(el("p", { className: "sheet-msg", textContent: "Couldn't load the comparison. Try again." }));
     return;
   }
-  const here = state.current?.market;
+  const here = state.market;
   const list = data.markets;
   if (list.length < 2) {
     els.cmpBody.replaceChildren(
@@ -405,11 +507,15 @@ async function openCompare(i) {
   const max = list[list.length - 1].price;
   const cheapest = list.filter((m) => m.price === min);
   const unitVaries = UNIT_VARIES.has(i.item);
-  const v = verdict(i);
   const where = cheapest.length === 1 ? `${cheapest[0].market} at ${rupees(min)}` : `${plural(cheapest.length, "bazar")} at ${rupees(min)}`;
-  const summary = cheapest.some((m) => m.marketId === here?.id)
-    ? `${here.name} is among the cheapest at ${rupees(i.price)}.`
-    : `At ${here?.name} it's ${rupees(i.price)}${v?.tone === "plain" ? ", a typical price" : ""}. Cheapest is ${where}.`;
+  let summary;
+  if (unitVaries) summary = `Bazars sell this by different units, so these rates don't compare directly.`;
+  else if (!here) summary = `Typical price is ${rupees(i.stats.median)}/kg. Cheapest is ${where}.`;
+  else if (cheapest.some((m) => m.marketId === here.id)) summary = `${here.name} is among the cheapest at ${rupees(i.price)}.`;
+  else {
+    const v = verdict(i);
+    summary = `At ${here.name} it's ${rupees(i.price)}${v?.tone === "plain" ? ", a typical price" : ""}. Cheapest is ${where}.`;
+  }
 
   els.cmpBody.replaceChildren(
     el(
@@ -426,29 +532,42 @@ async function openCompare(i) {
     ),
     el(
       "ol",
-      { className: "cmp-list", ariaLabel: "Bazars, cheapest first" },
+      { className: "cmp-list", ariaLabel: "Bazars, cheapest first. Tap one to see all its prices" },
       ...list.map((m) => {
         const isHere = m.marketId === here?.id;
-        const isCheapest = m.price === min;
+        const isCheapest = m.price === min && !unitVaries;
         return el(
           "li",
-          { className: `cmp-row${isHere ? " here" : isCheapest ? " cheapest" : ""}` },
+          {},
           el(
-            "span",
-            { className: "where" },
+            "button",
+            {
+              type: "button",
+              className: `cmp-row${isHere ? " here" : isCheapest ? " cheapest" : ""}`,
+              ariaLabel: `${m.market}, ${m.district}, ${rupees(m.price)}. See all prices at ${m.market}`,
+              onclick: () => {
+                els.compare.close();
+                if (!isHere) go(String(m.marketId));
+              },
+            },
             el(
               "span",
-              { className: "name" },
-              el("b", { textContent: m.market }),
-              el("small", { textContent: m.district + (m.date === data.today ? "" : ` · ${fmtDate(m.date)}`) }),
+              { className: "where" },
+              el(
+                "span",
+                { className: "name" },
+                el("b", { textContent: m.market }),
+                el("small", { textContent: m.district + (m.date === data.today ? "" : ` · ${fmtDate(m.date)}`) }),
+              ),
+              el("span", { className: "bar", ariaHidden: "true" }, el("span", { style: `width:${(m.price / max) * 100}%` })),
             ),
-            el("span", { className: "bar", ariaHidden: "true" }, el("span", { style: `width:${(m.price / max) * 100}%` })),
-          ),
-          el(
-            "span",
-            { className: "val" },
-            el("span", { className: "num", textContent: rupees(m.price) }),
-            el("small", { textContent: isHere ? "This bazar" : isCheapest ? "Cheapest" : "" }),
+            el(
+              "span",
+              { className: "val" },
+              el("span", { className: "num", textContent: rupees(m.price) }),
+              el("small", { textContent: isHere ? "This bazar" : isCheapest ? "Cheapest" : "" }),
+            ),
+            chevron(),
           ),
         );
       }),
@@ -456,7 +575,18 @@ async function openCompare(i) {
   );
 }
 
-// ---------- Market picker ----------
+function chevron() {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("class", "chev");
+  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  path.setAttribute("d", "M9 6l6 6-6 6");
+  svg.append(path);
+  return svg;
+}
+
+// ---------- Bazar list ----------
 
 function openMarkets() {
   els.mkSearch.value = "";
@@ -470,8 +600,12 @@ function renderMarkets() {
   const hits = state.all.filter((m) => !q || m.name.toLowerCase().includes(q) || m.district.toLowerCase().includes(q));
   const today = hits.filter(reportedToday);
   const later = hits.filter((m) => !reportedToday(m));
-  const currentId = state.current?.market.id;
+  const currentId = state.market?.id;
 
+  const pick = (id) => {
+    els.markets.close();
+    if (String(id ?? "") !== String(currentId ?? "")) go(id == null ? null : String(id));
+  };
   const btn = (m, isLater) =>
     el(
       "li",
@@ -482,11 +616,7 @@ function renderMarkets() {
           type: "button",
           className: `mk-btn${isLater ? " later" : ""}`,
           ariaCurrent: m.id === currentId ? "true" : "false",
-          onclick: () => {
-            els.markets.close();
-            els.search.value = "";
-            if (m.id !== currentId) selectMarket(String(m.id));
-          },
+          onclick: () => pick(m.id),
         },
         el("span", { className: "radio", ariaHidden: "true" }),
         el(
@@ -506,9 +636,30 @@ function renderMarkets() {
       ),
     );
 
+  const allBtn = el(
+    "ul",
+    { className: "mk-list" },
+    el(
+      "li",
+      {},
+      el(
+        "button",
+        { type: "button", className: "mk-btn", ariaCurrent: currentId == null ? "true" : "false", onclick: () => pick(null) },
+        el("span", { className: "radio", ariaHidden: "true" }),
+        el(
+          "span",
+          { className: "what" },
+          el("span", { className: "en", textContent: "All bazars" }),
+          el("span", { className: "sub", textContent: "Typical prices across Telangana" }),
+        ),
+      ),
+    ),
+  );
+
   els.mkBody.replaceChildren(
     ...(hits.length
       ? [
+          q ? null : allBtn,
           today.length ? el("h3", { className: "sheet-section", textContent: `Reporting today · ${today.length}` }) : null,
           today.length ? el("ul", { className: "mk-list" }, ...today.map((m) => btn(m, false))) : null,
           later.length ? el("h3", { className: "sheet-section muted", textContent: `Not reported today · ${later.length}` }) : null,
@@ -522,10 +673,5 @@ function setFresh(text, stale = false) {
   els.fresh.classList.toggle("stale", stale);
   els.fresh.textContent = text;
 }
-
-window.addEventListener("popstate", () => {
-  const id = new URLSearchParams(location.search).get("market");
-  if (id && state.all.some((m) => String(m.id) === id)) selectMarket(id, { replace: true });
-});
 
 init();

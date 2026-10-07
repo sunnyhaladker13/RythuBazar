@@ -25,10 +25,13 @@
           <span id="today"></span>
         </div>
 
-        <button type="button" class="market-btn" id="market-btn" aria-haspopup="dialog" disabled>
-          <span class="market-name"><span id="market-name">Loading…</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg></span>
-          <span class="market-sub" id="market-sub">Finding bazars</span>
-        </button>
+        <div class="title">
+          <button type="button" class="back-btn" id="back" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>All bazars
+          </button>
+          <h1 class="market-name" id="title">Today's rates</h1>
+          <p class="market-sub" id="sub">Typical prices across Telangana's Rythu Bazars</p>
+        </div>
 
         <p class="fresh" id="fresh" role="status" aria-live="polite"></p>
 
@@ -46,7 +49,10 @@
         <div class="chips" role="group" aria-label="Sort">
           <button type="button" class="chip" data-sort="az">A–Z</button>
           <button type="button" class="chip" data-sort="cheap">Cheapest first</button>
-          <button type="button" class="chip" data-sort="deals">Best deals here</button>
+          <button type="button" class="chip" data-sort="deals" hidden>Best deals here</button>
+          <button type="button" class="chip chip-bazar" id="bazar-chip" aria-haspopup="dialog" disabled>
+            One bazar<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+          </button>
         </div>
       </div>
     </div>
@@ -60,7 +66,7 @@
     <footer class="wrap foot">
       <p>
         <strong>Reading the strip:</strong> the line runs from the lowest to the highest rate across bazars that reported in the
-        last three days. The square is this bazar; the tick is the typical (middle) rate.
+        last three days. The square is the typical (middle) rate, or the bazar's own rate when you're viewing one bazar.
       </p>
       <p>
         Rates as published by the Telangana Agricultural Marketing Department's Rythu Bazar Information System, in ₹ per kg.
@@ -86,7 +92,7 @@
     <dialog id="markets" class="sheet" aria-labelledby="mk-title">
       <div class="sheet-grip" aria-hidden="true"></div>
       <div class="sheet-head">
-        <div class="sheet-title"><h2 id="mk-title">Pick your bazar</h2></div>
+        <div class="sheet-title"><h2 id="mk-title">Bazars</h2></div>
         <button type="button" class="icon-btn" data-close aria-label="Close">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
         </button>

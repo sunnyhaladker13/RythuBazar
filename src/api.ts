@@ -16,6 +16,7 @@ const json = (data: unknown, status = 200, maxAge = 120) =>
 export async function handleApi(req: Request, env: ApiEnv, url: URL): Promise<Response> {
   const path = url.pathname;
   if (req.method === "GET" && path === "/api/markets") return markets(env);
+  if (req.method === "GET" && path === "/api/overview") return overview(env);
   if (req.method === "GET" && path === "/api/prices") return prices(env, url);
   if (req.method === "GET" && path === "/api/item") return item(env, url);
   if (req.method === "GET" && path === "/api/status") return status(env);
@@ -77,17 +78,12 @@ async function prices(env: ApiEnv, url: URL) {
       `SELECT item, price, updated_at AS updatedAt FROM prices
         WHERE market_id = ?1 AND date = ?2 ORDER BY item`,
     ).bind(marketId, market.latestDate),
-    // Every active market's latest table within the same window /api/item uses.
     env.DB.prepare(
-      `WITH latest AS (
-         SELECT p.market_id, MAX(p.date) AS date
-           FROM prices p JOIN markets m ON m.id = p.market_id AND m.active = 1
-          WHERE p.date >= ?1
-          GROUP BY p.market_id)
+      `${LATEST}
        SELECT p.item, GROUP_CONCAT(p.price) AS prices
          FROM prices p JOIN latest l ON l.market_id = p.market_id AND l.date = p.date
         GROUP BY p.item`,
-    ).bind(istDate(new Date(Date.now() - 3 * 86_400_000))),
+    ).bind(windowStart()),
   ]);
   const stats = new Map(
     (spread.results as { item: string; prices: string }[]).map((r) => [r.item, priceStats(r.prices)]),
@@ -105,6 +101,45 @@ async function prices(env: ApiEnv, url: URL) {
   });
 }
 
+/** Every active market's latest price table within the window /api/item also uses. */
+const LATEST = `WITH latest AS (
+  SELECT p.market_id, MAX(p.date) AS date
+    FROM prices p JOIN markets m ON m.id = p.market_id AND m.active = 1
+   WHERE p.date >= ?1
+   GROUP BY p.market_id)`;
+const windowStart = () => istDate(new Date(Date.now() - 3 * 86_400_000));
+
+/** All bazars at once: each item's typical price, range and where it's cheapest. */
+async function overview(env: ApiEnv) {
+  const today = istDate(new Date());
+  const [rows, counts] = await env.DB.batch([
+    env.DB.prepare(
+      `${LATEST}
+       SELECT p.item, p.price, m.name AS market
+         FROM prices p
+         JOIN latest l ON l.market_id = p.market_id AND l.date = p.date
+         JOIN markets m ON m.id = p.market_id
+        ORDER BY p.item, p.price, m.name`,
+    ).bind(windowStart()),
+    env.DB.prepare(
+      `SELECT (SELECT COUNT(*) FROM markets WHERE active = 1) AS markets,
+              (SELECT COUNT(*) FROM markets WHERE active = 1 AND last_reported_date = ?1) AS reportedToday,
+              (SELECT MAX(last_checked_at) FROM markets WHERE active = 1) AS lastCheckedAt`,
+    ).bind(today),
+  ]);
+  const byItem = new Map<string, { price: number; market: string }[]>();
+  for (const r of rows.results as { item: string; price: number; market: string }[]) {
+    if (!byItem.has(r.item)) byItem.set(r.item, []);
+    byItem.get(r.item)!.push(r);
+  }
+  const items = [...byItem].map(([item, list]) => {
+    const stats = priceStats(list.map((r) => r.price).join(","));
+    const cheapest = list.filter((r) => r.price === stats.min).map((r) => r.market);
+    return { item, ...stats, cheapest };
+  });
+  return json({ today, ...(counts.results[0] as object), items });
+}
+
 /** Spread of one item's price across markets, from a GROUP_CONCAT list. */
 export function priceStats(csv: string) {
   const ps = csv
@@ -120,7 +155,7 @@ export function priceStats(csv: string) {
 async function item(env: ApiEnv, url: URL) {
   const name = url.searchParams.get("name")?.trim();
   if (!name) return json({ error: "name is required" }, 400, 0);
-  const since = istDate(new Date(Date.now() - 3 * 86_400_000));
+  const since = windowStart();
   const { results } = await env.DB.prepare(
     `SELECT p.market_id AS marketId, m.name AS market, d.name AS district, p.date, p.price
        FROM prices p
