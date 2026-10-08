@@ -1,22 +1,28 @@
 import { istDate, runTick, type ScrapeEnv } from "./scraper/tick";
+import { snapshot } from "./snapshot";
 
 export interface ApiEnv extends ScrapeEnv {
   ADMIN_TOKEN?: string;
 }
 
-const json = (data: unknown, status = 200, maxAge = 120) =>
-  new Response(JSON.stringify(data), {
+const respond = (body: string, status = 200, maxAge = 120) =>
+  new Response(body, {
     status,
     headers: {
       "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": maxAge ? `public, max-age=${maxAge}` : "no-store",
     },
   });
+const json = (data: unknown, status = 200, maxAge = 120) => respond(JSON.stringify(data), status, maxAge);
+
+// The two endpoints every home page view calls are served from snapshots (src/snapshot.ts).
+const overviewBody = (env: ApiEnv) => snapshot(env.DB, "overview", () => buildOverview(env));
+const marketsBody = (env: ApiEnv) => snapshot(env.DB, "markets", () => buildMarkets(env));
 
 export async function handleApi(req: Request, env: ApiEnv, url: URL): Promise<Response> {
   const path = url.pathname;
-  if (req.method === "GET" && path === "/api/markets") return markets(env);
-  if (req.method === "GET" && path === "/api/overview") return overview(env);
+  if (req.method === "GET" && path === "/api/markets") return respond(await marketsBody(env));
+  if (req.method === "GET" && path === "/api/overview") return respond(await overviewBody(env));
   if (req.method === "GET" && path === "/api/prices") return prices(env, url);
   if (req.method === "GET" && path === "/api/item") return item(env, url);
   if (req.method === "GET" && path === "/api/status") return status(env);
@@ -24,7 +30,7 @@ export async function handleApi(req: Request, env: ApiEnv, url: URL): Promise<Re
   return json({ error: "not found" }, 404, 0);
 }
 
-async function markets(env: ApiEnv) {
+async function buildMarkets(env: ApiEnv) {
   const { results } = await env.DB.prepare(
     `SELECT d.id AS districtId, d.name AS district, m.id, m.name,
             m.last_reported_date AS lastReportedDate, m.last_item_count AS itemCount,
@@ -46,7 +52,7 @@ async function markets(env: ApiEnv) {
     if (!districts.has(districtId)) districts.set(districtId, { id: districtId, name: district, markets: [] });
     districts.get(districtId)!.markets.push(m);
   }
-  return json({ today: istDate(new Date()), districts: [...districts.values()] });
+  return { today: istDate(new Date()), districts: [...districts.values()] };
 }
 
 async function prices(env: ApiEnv, url: URL) {
@@ -73,22 +79,23 @@ async function prices(env: ApiEnv, url: URL) {
     });
   }
 
-  const [own, spread] = await env.DB.batch([
+  const [own, overviewJson] = await Promise.all([
     env.DB.prepare(
       `SELECT item, price, updated_at AS updatedAt FROM prices
         WHERE market_id = ?1 AND date = ?2 ORDER BY item`,
-    ).bind(marketId, market.latestDate),
-    env.DB.prepare(
-      `${LATEST}
-       SELECT p.item, GROUP_CONCAT(p.price) AS prices
-         FROM latest l CROSS JOIN prices p ON p.market_id = l.market_id AND p.date = l.date
-        GROUP BY p.item`,
-    ).bind(windowStart()),
+    )
+      .bind(marketId, market.latestDate)
+      .all<{ item: string; price: number; updatedAt: string }>(),
+    // Each item's spread across bazars is exactly what the overview already computes.
+    overviewBody(env),
   ]);
   const stats = new Map(
-    (spread.results as { item: string; prices: string }[]).map((r) => [r.item, priceStats(r.prices)]),
+    (JSON.parse(overviewJson) as Overview).items.map(({ item, min, max, median, markets }) => [
+      item,
+      { min, max, median, markets },
+    ]),
   );
-  const items = (own.results as { item: string; price: number; updatedAt: string }[]).map((i) => ({
+  const items = own.results.map((i) => ({
     ...i,
     stats: stats.get(i.item) ?? null,
   }));
@@ -112,8 +119,10 @@ const LATEST = `WITH latest AS (
    WHERE active = 1 AND last_reported_date >= ?1)`;
 const windowStart = () => istDate(new Date(Date.now() - 3 * 86_400_000));
 
+type Overview = Awaited<ReturnType<typeof buildOverview>>;
+
 /** All bazars at once: each item's typical price, range and where it's cheapest. */
-async function overview(env: ApiEnv) {
+async function buildOverview(env: ApiEnv) {
   const today = istDate(new Date());
   const [rows, counts] = await env.DB.batch([
     env.DB.prepare(
@@ -141,7 +150,7 @@ async function overview(env: ApiEnv) {
     const cheapest = list.filter((r) => r.price === stats.min).map((r) => r.market);
     return { item, ...stats, cheapest };
   });
-  return json({ today, ...(counts.results[0] as object), items });
+  return { today, ...(counts.results[0] as object), items };
 }
 
 /** Spread of one item's price across markets, from a GROUP_CONCAT list. */

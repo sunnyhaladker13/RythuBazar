@@ -33,6 +33,7 @@ Static site (public/): all-bazar overview by default, one bazar via ?market=<id>
 | `src/scraper/` | `rbzts.ts` (fetch and parse), `plan.ts` (what's due this tick), `tick.ts` (one run) |
 | `src/api.ts` | JSON endpoints (below) |
 | `src/share.ts` | Open Graph tags per request |
+| `src/snapshot.ts` | Saved responses for `/api/overview` and `/api/markets` (below) |
 | `public/` | The site: `index.html`, `app.js`, `styles.css`, `og.jpg` |
 | `design/` | Share-card source (`og-card.html`) and its renderer |
 | `migrations/` | D1 schema |
@@ -46,7 +47,7 @@ Static site (public/): all-bazar overview by default, one bazar via ?market=<id>
 | 50 subrequests per invocation (fetch **and** D1 both count) | Each tick makes at most `FETCH_BUDGET` = 35 fetches, retries included. D1 adds ≤ 11 (2 reads, 1 lease, ≤ 8 writes in one batch). Rows go to D1 as a single JSON param through `json_each`, so a batch is ~8 statements whatever its size. |
 | 10 ms CPU per invocation | Regex parsing costs ≈ 0.2 ms per page (`npm test` prints it). View-state parsing is skipped on market pages, and network waits don't count as CPU. |
 | 5 cron triggers per account | Uses 1: `*/5 0-10 * * *` (every 5 min, 05:30–16:25 IST). |
-| D1: 100k writes / 5M reads per day | Prices are written only when a market's table changes (hash check, plus `ON CONFLICT … WHERE price != excluded.price`). Expect ~1–3k writes per day. |
+| D1: 100k writes / 5M reads per day | Prices are written only when a market's table changes (hash check, plus `ON CONFLICT … WHERE price != excluded.price`). Expect ~1–3k writes per day. Reads: page views are served from saved snapshots (1 row instead of ~1,000; see API). |
 | `fetch()` can't target a bare IP (error 1003) | `RBZ_ORIGIN` uses `183-82-5-184.sslip.io`, a public wildcard DNS name that resolves to the IP. IIS ignores the Host header. |
 
 **Scheduling** (`src/scraper/plan.ts`): a full crawl is ~60 requests (1 home + 1 per district + 1 per market), too many for one invocation. So each tick does the most overdue slice of work that fits the budget:
@@ -88,6 +89,15 @@ npm test && npm run typecheck
 
 ## API
 
+`/api/*` is rate limited per IP at 300 requests/min (Workers rate-limit binding `API_LIMITER`; approximate and per Cloudflare location). Over the limit gets `429`. It is generous on purpose, because Indian mobile carriers share one IP across many users. Requests it blocks still count toward the Worker's 100k/day; only a firewall rule in front (needs a custom domain) avoids that.
+
+**Snapshots** (`src/snapshot.ts`, table `snapshots`): `/api/overview` (~920 rows to build) and `/api/markets` (~120) are saved as ready-made JSON, so a request reads 1 row. `/api/prices` takes each item's cross-bazar spread from the overview snapshot (~30 rows instead of ~815). A snapshot is rebuilt on the next request after any of these:
+- the scraper writes anything (`tick.ts` deletes all snapshots in the same batch);
+- the IST date changes;
+- 5 minutes pass (a backstop).
+
+It's safe to empty the table at any time.
+
 | Endpoint | Returns |
 |---|---|
 | `GET /api/markets` | Districts → markets, with `lastReportedDate` |
@@ -112,7 +122,8 @@ npm test && npm run typecheck
 
 ## Things to watch after the first deploy
 
-- **Upstream reachability:** verified 2026-10-07 — rbzts answers requests from Cloudflare. If every run in `/api/status` starts showing `fatal: … timed out`, it has started blocking.
-- **D1 reads:** "latest table per market" comes from `markets.last_reported_date`, not `MAX(date)` over `prices`, so page views don't scan the whole history. Keep it that way; check `meta.rows_read` with `wrangler d1 execute --remote --json` when changing queries.
+- **Migrations before deploys:** apply `npm run db:migrate:remote` before `npm run deploy`. The scraper's write batch touches `snapshots`, so new code against an unmigrated DB would make every tick fail.
+- **Upstream reachability:** verified 2026-10-07 — rbzts answers requests from Cloudflare. It does go down: on 8 Oct it timed out from ~10:25 IST for everyone, not just Cloudflare. If every run in `/api/status` starts showing `fatal: … timed out`, it has started blocking.
+- **D1 reads:** home page views read ~2 rows (snapshots); a rebuild reads ~1k, at most every 5 minutes. "Latest table per market" comes from `markets.last_reported_date`, not `MAX(date)` over `prices`, so page views don't scan the whole history. Keep it that way; check `meta.rows_read` with `wrangler d1 execute --remote --json` when changing queries.
 - **CPU time:** Workers dashboard → Observability shows CPU per invocation. If ticks get close to 10 ms, lower `FETCH_BUDGET`.
 - **sslip.io dependency:** if you own a domain on Cloudflare, add a DNS-only A record (e.g. `rbz-origin.example.com → 183.82.5.184`) and point `RBZ_ORIGIN` at it.

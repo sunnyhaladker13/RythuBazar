@@ -313,6 +313,8 @@ export async function runTick(env: ScrapeEnv, trigger: "cron" | "manual", now = 
         .bind(json(priceRows), nowIso),
     );
   }
+  // Something the pages show changed, so drop the ready-made API responses (src/snapshot.ts).
+  if (stmts.length) stmts.push(db.prepare("DELETE FROM snapshots"));
   stmts.push(
     db
       .prepare(

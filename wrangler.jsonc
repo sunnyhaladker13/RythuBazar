@@ -9,6 +9,10 @@
   // can fill in the link-preview tags (src/share.ts).
   "assets": { "directory": "./public", "binding": "ASSETS", "run_worker_first": ["/"] },
 
+  // Per-IP limit on /api/* (src/index.ts). Approximate and per Cloudflare location. Generous
+  // because Indian mobile carriers put many users behind one IP; it only stops runaway scripts.
+  "ratelimits": [{ "name": "API_LIMITER", "namespace_id": "1001", "simple": { "limit": 300, "period": 60 } }],
+
   "d1_databases": [
     {
       "binding": "DB",
