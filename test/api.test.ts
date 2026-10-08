@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { movers, priceStats, usableDays } from "../src/api";
+import { describe as label } from "../src/items";
 
 describe("priceStats", () => {
   it("handles one market", () => {
@@ -62,5 +63,22 @@ describe("usableDays", () => {
 
   it("keeps a thin day when it isn't today", () => {
     expect(usableDays([d("2026-10-06", 16), d("2026-10-07", 4)], "2026-10-08")).toHaveLength(2);
+  });
+});
+
+describe("item labels", () => {
+  it("labels listed names, ignoring case, spaces and punctuation", () => {
+    expect(label("Tomato")).toMatchObject({ en: "Tomato", te: "టమాటా", known: true });
+    expect(label("beetroot")).toMatchObject({ en: "Beetroot", known: true });
+  });
+
+  it("labels a variety from its base item", () => {
+    expect(label("Tomato-618")).toMatchObject({ en: "Tomato (618)", te: "టమాటా", known: true });
+    expect(label("Onions-II")).toMatchObject({ en: "Onion (II)", te: "ఉల్లిపాయ", known: true });
+  });
+
+  it("flags anything else as unknown, under its raw name", () => {
+    expect(label("Dragon Fruit")).toEqual({ en: "Dragon Fruit", te: "", color: "#a6a8aa", known: false });
+    expect(label("Mystery-2")).toMatchObject({ en: "Mystery-2", known: false });
   });
 });

@@ -425,6 +425,13 @@ svg {
 .row:hover {
   background: var(--sun-soft);
 }
+/* A search hit with only an old price: not tappable, and visibly older than today's rows. */
+.row.old {
+  color: var(--muted);
+}
+.row.old:hover {
+  background: none;
+}
 
 .tile {
   flex: none;

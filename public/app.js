@@ -28,35 +28,6 @@ const els = {
   mkBody: $("mk-body"),
 };
 
-// rbzts item name → English label, Telugu name, tile colour.
-const ITEMS = {
-  Aratikaya: ["Raw banana", "అరటికాయ", "#6f9a3b"],
-  "Beet Root": ["Beetroot", "బీట్‌రూట్", "#9b1f45"],
-  Bhendi: ["Okra (bhindi)", "బెండకాయ", "#5f9a3a"],
-  "Bitter Gourd": ["Bitter gourd", "కాకరకాయ", "#4d7a2a"],
-  "Bottle Gourd": ["Bottle gourd", "సొరకాయ", "#a8c66c"],
-  Brinjal: ["Brinjal", "వంకాయ", "#5b3a78"],
-  Cabbage: ["Cabbage", "క్యాబేజీ", "#9cc56b"],
-  Carrot: ["Carrot", "క్యారెట్", "#f07d22"],
-  Cauliflower: ["Cauliflower", "కాలీఫ్లవర్", "#e8dfbf"],
-  "Cluster Beans": ["Cluster beans", "గోరుచిక్కుడు", "#6a9a40"],
-  "Colocasia(Chama)": ["Colocasia (arbi)", "చామదుంప", "#7a5a44"],
-  Cucumber: ["Cucumber", "దోసకాయ", "#6aa84f"],
-  Donda: ["Ivy gourd (tindora)", "దొండకాయ", "#4b8a3a"],
-  "Field Beans": ["Field beans", "చిక్కుడుకాయ", "#7aa54a"],
-  "French Beans": ["French beans", "బీన్స్", "#4f8a2e"],
-  "Green Chillies": ["Green chillies", "పచ్చిమిర్చి", "#3f8f3a"],
-  Kanda: ["Elephant foot yam", "కంద", "#8c6a4a"],
-  Keera: ["Keera (cucumber)", "కీర దోసకాయ", "#3e7d3a"],
-  "Leafy Vegetables": ["Leafy greens", "ఆకుకూరలు", "#2f7d32"],
-  Mulagakada: ["Drumstick", "మునగకాయ", "#567d2e"],
-  "Onions-I": ["Onion", "ఉల్లిపాయ", "#b04a7a"],
-  Potato: ["Potato", "బంగాళదుంప", "#c9a26b"],
-  "Ribbed Gourd": ["Ridge gourd", "బీరకాయ", "#6d8f3e"],
-  Rice: ["Rice", "బియ్యం", "#e8e0cc"],
-  "Snake Gourd": ["Snake gourd", "పొట్లకాయ", "#8fb35a"],
-  Tomato: ["Tomato", "టమాటా", "#e2412f"],
-};
 // The board shows the biggest price moves; until there are enough (no history yet, or nothing moved), these fill it.
 const STAPLES = [
   ["Tomato", "Tomato"],
@@ -66,9 +37,20 @@ const STAPLES = [
 // Sold per piece or bunch at some bazars and per kg at others; the source doesn't say which.
 const UNIT_VARIES = new Set(["Mulagakada", "Leafy Vegetables"]);
 
-const info = (item) => {
-  const [en, te, color] = ITEMS[item] ?? [item, "", "#a6a8aa"];
-  return { en, te, color };
+// Fewer bazars than this and an item isn't really "across bazars": all-branches leaves it out of
+// the list, but search still finds it.
+const RARE = 3;
+
+// English/Telugu names and tile colours come with the data (src/items.ts) and are kept here
+// so sorting and the compare sheet can use them.
+const labels = new Map();
+const remember = (list) => {
+  for (const i of list ?? []) if (i.en) labels.set(i.item, { en: i.en, te: i.te, color: i.color });
+};
+const info = (item) => labels.get(item) ?? { en: item, te: "", color: "#a6a8aa" };
+const matches = (item, q) => {
+  const { en, te } = info(item);
+  return item.toLowerCase().includes(q) || en.toLowerCase().includes(q) || te.includes(q);
 };
 
 const store = {
@@ -216,6 +198,8 @@ async function showAll() {
   }
   if (state.market) return; // navigated away meanwhile
   const checked = data.lastCheckedAt ? ` · checked ${timeFmt.format(new Date(data.lastCheckedAt))}` : "";
+  remember(data.items);
+  remember(data.missing);
   state.current = {
     date: data.today,
     isToday: true,
@@ -228,6 +212,7 @@ async function showAll() {
     })),
     changes: data.changes ?? [],
     movers: data.movers ?? [],
+    missing: data.missing ?? [],
   };
   if (!data.items.length) {
     setFresh(`No bazar has posted rates yet${checked}`, true);
@@ -271,6 +256,7 @@ async function showMarket(id) {
   }
   if (String(state.market?.id) !== id) return; // navigated away meanwhile
   state.market = data.market;
+  remember(data.items);
   state.current = data;
   const { date, isToday, market, items } = data;
   document.title = `${market.name} · Rythu Bazar rates today`;
@@ -438,25 +424,28 @@ function render() {
   }
   if (!state.current) return;
   const q = els.search.value.trim().toLowerCase();
-  let items = state.current.items.filter((i) => {
-    if (!q) return true;
-    const { en, te } = info(i.item);
-    return i.item.toLowerCase().includes(q) || en.toLowerCase().includes(q) || te.includes(q);
-  });
+  let items = state.current.items.filter((i) =>
+    q ? matches(i.item, q) : state.market || !i.stats || i.stats.markets >= RARE,
+  );
+  // Listed vegetables no bazar has reported lately: search shows their last price on record.
+  const lost = q && !state.market ? (state.current.missing ?? []).filter((m) => matches(m.item, q)) : [];
   if (state.sort === "az") items = items.slice().sort((a, b) => info(a.item).en.localeCompare(info(b.item).en));
   if (state.sort === "cheap") items = items.slice().sort((a, b) => a.price - b.price);
   if (state.sort === "deals") items = items.slice().sort(compareDeals);
 
   const changes = new Map((state.current.changes ?? []).map((m) => [m.item, m]));
-  els.prices.replaceChildren(...items.map((i) => row(i, changes.get(i.item))));
-  els.empty.hidden = items.length > 0 || state.current.items.length === 0;
+  els.prices.replaceChildren(...items.map((i) => row(i, changes.get(i.item))), ...lost.map(lastSeenRow));
+  els.empty.hidden = items.length + lost.length > 0 || state.current.items.length === 0;
   els.empty.textContent = q ? `Nothing matches “${els.search.value.trim()}”.` : "";
 }
 
 function row(i, move) {
   const { en, te, color } = info(i.item);
-  const v = verdict(i);
   const s = i.stats;
+  const rare = !state.market && s && s.markets < RARE;
+  const v = rare
+    ? { tone: "plain", text: s.markets === 1 ? `Only at ${place(i.cheapest?.[0] ?? "one bazar")}` : `Only ${s.markets} bazars report this` }
+    : verdict(i);
   const unitVaries = UNIT_VARIES.has(i.item);
   // All bazars: the range is the headline, so the strip only earns its place inside one bazar.
   const showStrip = Boolean(state.market) && comparable(i) && s.max > s.min;
@@ -524,6 +513,46 @@ function row(i, move) {
             )
           : null,
       ),
+    ),
+  );
+}
+
+const lastSeen = new Map(); // item → promise of its /api/last day, so retyping doesn't refetch
+
+/** A search hit for a vegetable nobody has reported in the last 3 days: its last price on record. */
+function lastSeenRow(m) {
+  const { en, te, color } = info(m.item);
+  const badge = el("span", { className: "badge plain", textContent: "Looking up its last price…" });
+  const cost = el("span", { className: "cost" });
+  if (!lastSeen.has(m.item)) {
+    lastSeen.set(m.item, api(`/api/last?name=${encodeURIComponent(m.item)}`).then((r) => r.day, () => undefined));
+  }
+  lastSeen.get(m.item).then((day) => {
+    if (day === undefined) badge.textContent = "Couldn't look up its last price.";
+    else if (!day) badge.textContent = "No bazar has reported this yet.";
+    else {
+      badge.textContent = `Last reported ${fmtDate(day.date)} · ${plural(day.markets, "bazar")}`;
+      const text = day.min === day.max ? rupees(day.median) : `${rupees(day.min)}–${money(day.max)}`;
+      cost.replaceChildren(
+        el("span", { className: `num${text.length > 5 ? " small" : ""}` }, text, el("span", { className: "unit", textContent: "/kg" })),
+      );
+    }
+  });
+  return el(
+    "li",
+    {},
+    el(
+      "div",
+      { className: "row old" },
+      el("span", { className: "tile", ariaHidden: "true", style: `background:${color};color:${inkOn(color)}` }, te ? [...te][0] : en[0]),
+      el(
+        "span",
+        { className: "what" },
+        el("span", { className: "en", textContent: en }),
+        te ? el("span", { className: "te", textContent: te }) : null,
+        badge,
+      ),
+      cost,
     ),
   );
 }

@@ -1,5 +1,12 @@
 import { istDate, runTick, type ScrapeEnv } from "./scraper/tick";
+import { ITEMS, describe } from "./items";
 import { snapshot } from "./snapshot";
+
+/** An item's display labels, for the page (no `known`: that's for /api/status). */
+const labels = (item: string) => {
+  const { en, te, color } = describe(item);
+  return { en, te, color };
+};
 
 export interface ApiEnv extends ScrapeEnv {
   ADMIN_TOKEN?: string;
@@ -26,6 +33,7 @@ export async function handleApi(req: Request, env: ApiEnv, url: URL): Promise<Re
   if (req.method === "GET" && path === "/api/prices") return prices(env, url);
   if (req.method === "GET" && path === "/api/item") return item(env, url);
   if (req.method === "GET" && path === "/api/history") return history(env, url);
+  if (req.method === "GET" && path === "/api/last") return last(env, url);
   if (req.method === "GET" && path === "/api/status") return status(env);
   if (req.method === "POST" && path === "/api/admin/scrape") return manualScrape(req, env);
   return json({ error: "not found" }, 404, 0);
@@ -111,6 +119,7 @@ async function prices(env: ApiEnv, url: URL) {
   }
   const items = own.results.map((i) => ({
     ...i,
+    ...labels(i.item),
     stats: stats.get(i.item) ?? null,
     trend: trends.get(i.item) ?? [],
   }));
@@ -188,10 +197,15 @@ async function buildOverview(env: ApiEnv) {
   const items = [...byItem].map(([item, list]) => {
     const stats = priceStats(list.map((r) => r.price).join(","));
     const cheapest = list.filter((r) => r.price === stats.min).map((r) => r.market);
-    return { item, ...stats, cheapest, trend: usableDays(trends.get(item) ?? [], today).map((d) => d.median) };
+    return { item, ...labels(item), ...stats, cheapest, trend: usableDays(trends.get(item) ?? [], today).map((d) => d.median) };
   });
   const changes = movers(rows.results as Row[], before.results as Row[], MIN_MOVER_BAZARS, Infinity);
-  return { today, ...(counts.results[0] as object), items, changes, movers: changes.slice(0, 3) };
+  // Listed vegetables no bazar has reported lately, so search can still offer their last price.
+  const seen = new Set(items.map((i) => i.item));
+  const missing = Object.keys(ITEMS)
+    .filter((item) => !seen.has(item))
+    .map((item) => ({ item, ...labels(item) }));
+  return { today, ...(counts.results[0] as object), items, changes, movers: changes.slice(0, 3), missing };
 }
 
 const TREND_DAYS = 7;
@@ -210,6 +224,18 @@ export function usableDays<T extends { date: string; markets: number }>(days: T[
   const prev = ok[ok.length - 2];
   if (last?.date === today && prev && last.markets * 2 < prev.markets) ok.pop();
   return ok;
+}
+
+/** An item's most recent day on record, however old or thin: for search hits not reported lately. */
+async function last(env: ApiEnv, url: URL) {
+  const name = url.searchParams.get("name")?.trim();
+  if (!name) return json({ error: "name is required" }, 400, 0);
+  const day = await env.DB.prepare(
+    `SELECT date, median, min, max, markets FROM daily_stats WHERE item = ?1 ORDER BY date DESC LIMIT 1`,
+  )
+    .bind(name)
+    .first();
+  return json({ item: name, day: day ?? null });
 }
 
 /** One item's typical price and lowest–highest bazar per day, for the item chart. */
@@ -294,14 +320,20 @@ async function item(env: ApiEnv, url: URL) {
 }
 
 async function status(env: ApiEnv) {
-  const [runs, counts] = await env.DB.batch([
+  const [runs, counts, items] = await env.DB.batch([
     env.DB.prepare("SELECT * FROM scrape_runs ORDER BY id DESC LIMIT 20"),
     env.DB.prepare(
       `SELECT (SELECT COUNT(*) FROM markets WHERE active = 1) AS markets,
               (SELECT COUNT(*) FROM markets WHERE active = 1 AND last_reported_date = ?1) AS reportedToday`,
     ).bind(istDate(new Date())),
+    env.DB.prepare(
+      `SELECT item, MIN(date) AS firstSeen, MAX(date) AS lastSeen, MAX(markets) AS bazars
+         FROM daily_stats WHERE date >= ?1 GROUP BY item`,
+    ).bind(daysAgo(29)),
   ]);
-  return json({ ...(counts.results[0] as object), runs: runs.results }, 200, 0);
+  // Names seen in the last 30 days that src/items.ts can't label: add them there.
+  const unknownItems = (items.results as { item: string }[]).filter((r) => !describe(r.item).known);
+  return json({ ...(counts.results[0] as object), unknownItems, runs: runs.results }, 200, 0);
 }
 
 async function manualScrape(req: Request, env: ApiEnv) {
