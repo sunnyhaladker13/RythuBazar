@@ -89,12 +89,20 @@ const store = {
 const dateFmt = new Intl.DateTimeFormat("en-IN", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 const timeFmt = new Intl.DateTimeFormat("en-IN", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" });
 const fmtDate = (ymd) => dateFmt.format(new Date(`${ymd}T00:00:00Z`));
+const dayFmt = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", timeZone: "UTC" });
 const money = (n) => (Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.?0+$/, ""));
 const rupees = (n) => `₹${money(n)}`;
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 function el(tag, props = {}, ...children) {
   const node = Object.assign(document.createElement(tag), props);
+  node.append(...children.filter((c) => c != null && c !== false));
+  return node;
+}
+
+function svg(tag, attrs = {}, ...children) {
+  const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
   node.append(...children.filter((c) => c != null && c !== false));
   return node;
 }
@@ -216,8 +224,9 @@ async function showAll() {
       price: i.min, // lowest rate, so "Cheapest first" sorts by it
       stats: { min: i.min, max: i.max, median: i.median, markets: i.markets },
       cheapest: i.cheapest,
-      prices: i.prices,
+      trend: i.trend ?? [],
     })),
+    changes: data.changes ?? [],
     movers: data.movers ?? [],
   };
   if (!data.items.length) {
@@ -382,7 +391,6 @@ function renderBoard() {
     const move = moves.get(key);
     const s = i.stats;
     const priceText = priceLabel(i);
-    const showHist = !state.market && comparable(i) && s.max > s.min && i.prices?.length > 1;
     let note = "per kg";
     if (s && s.markets > 1) {
       if (!state.market) note = `per kg · ${s.markets} bazars`;
@@ -399,7 +407,7 @@ function renderBoard() {
         onclick: () => openCompare(i),
         ariaLabel: [
           `${label} ${priceText} per kg${state.market ? "" : " across bazars"}`,
-          move ? `${move.change > 0 ? "up" : "down"} ${rupees(Math.abs(move.change))}, ${Math.abs(move.pct)}%` : "",
+          move ? `${moveWords(move)}, ${Math.abs(move.pct)}%` : "",
           "Compare bazars",
         ]
           .filter(Boolean)
@@ -412,10 +420,10 @@ function renderBoard() {
         ? el("span", {
             className: "move",
             ariaHidden: "true",
-            textContent: `${move.change > 0 ? "▲" : "▼"} ${rupees(Math.abs(move.change))} · ${Math.abs(move.pct)}%`,
+            textContent: `${moveText(move)} · ${Math.abs(move.pct)}%`,
           })
         : null,
-      showHist ? histogram(i.prices, s) : null,
+      sparkline(i.trend),
       el("span", { className: "note", textContent: note }),
     );
   });
@@ -439,12 +447,13 @@ function render() {
   if (state.sort === "cheap") items = items.slice().sort((a, b) => a.price - b.price);
   if (state.sort === "deals") items = items.slice().sort(compareDeals);
 
-  els.prices.replaceChildren(...items.map(row));
+  const changes = new Map((state.current.changes ?? []).map((m) => [m.item, m]));
+  els.prices.replaceChildren(...items.map((i) => row(i, changes.get(i.item))));
   els.empty.hidden = items.length > 0 || state.current.items.length === 0;
   els.empty.textContent = q ? `Nothing matches “${els.search.value.trim()}”.` : "";
 }
 
-function row(i) {
+function row(i, move) {
   const { en, te, color } = info(i.item);
   const v = verdict(i);
   const s = i.stats;
@@ -453,11 +462,14 @@ function row(i) {
   const showStrip = Boolean(state.market) && comparable(i) && s.max > s.min;
   const pos = (p) => `${((p - s.min) / (s.max - s.min)) * 100}%`;
   const priceText = priceLabel(i);
-  const showHist = !state.market && comparable(i) && s.max > s.min && i.prices?.length > 1;
+  // All bazars: the last week's trend and the change since the day before, under the range.
+  const spark = state.market ? null : sparkline(i.trend);
+  const change = state.market || !move ? null : move;
 
   const label = [
     en,
     `${priceText}${unitVaries ? "" : " per kg"}${state.market ? "" : " across bazars"}`,
+    change ? `${moveWords(change)} since the day before` : "",
     v?.text,
     "Compare bazars",
   ]
@@ -495,7 +507,14 @@ function row(i) {
               el("span", { className: "dot", style: `left:${pos(i.price)}` }),
             )
           : null,
-        showHist ? histogram(i.prices, s) : null,
+        spark || change
+          ? el(
+              "span",
+              { className: "meta", ariaHidden: "true" },
+              spark,
+              change ? el("span", { className: `chg ${change.change > 0 ? "up" : "down"}`, textContent: moveText(change) }) : null,
+            )
+          : null,
         showStrip
           ? el(
               "span",
@@ -509,18 +528,24 @@ function row(i) {
   );
 }
 
-/** How the bazars spread across the range: one column per tenth of it, taller where more bazars charge that. */
-function histogram(prices, s) {
-  const BINS = 10;
-  const counts = Array(BINS).fill(0);
-  for (const p of prices) counts[Math.min(BINS - 1, Math.floor(((p - s.min) / (s.max - s.min)) * BINS))]++;
-  const top = Math.max(...counts);
-  return el(
-    "span",
-    { className: "hist", ariaHidden: "true" },
-    ...counts.map((n) => el("span", { className: n ? "" : "none", style: n ? `height:${4 + (n / top) * 10}px` : "" })),
+/** A small line of the last week's prices, stock-app style. Three days is the least that shows a trend. */
+function sparkline(values) {
+  if (!values || values.length < 3) return null;
+  const H = 12;
+  const lo = Math.min(...values);
+  const span = Math.max(...values) - lo;
+  const y = (v) => (span ? 1.5 + (1 - (v - lo) / span) * (H - 3) : H / 2).toFixed(1);
+  const points = values.map((v, n) => `${((n / (values.length - 1)) * 100).toFixed(1)},${y(v)}`).join(" ");
+  return svg(
+    "svg",
+    { class: "spark", viewBox: `0 0 100 ${H}`, preserveAspectRatio: "none", "aria-hidden": "true" },
+    svg("polyline", { points, "vector-effect": "non-scaling-stroke" }),
   );
 }
+
+// Unchanged prices get no label at all: an arrow appearing is the signal.
+const moveText = (m) => `${m.change > 0 ? "▲" : "▼"} ${rupees(Math.abs(m.change))}`;
+const moveWords = (m) => `${m.change > 0 ? "up" : "down"} ${rupees(Math.abs(m.change))}`;
 
 /** rbzts writes "Miryalaguda(NSP Camp)"; give the bracket a space so it wraps like a name. */
 const place = (name) => name.replace(/\s*\(/, " (");
@@ -547,6 +572,8 @@ async function openCompare(i) {
   els.cmpBody.replaceChildren(el("p", { className: "sheet-msg", textContent: "Comparing bazars…" }));
   els.compare.showModal();
   let data;
+  // The chart is extra: if history fails, the comparison still shows.
+  const history = api(`/api/history?name=${encodeURIComponent(i.item)}&days=30`).catch(() => null);
   try {
     data = await api(`/api/item?name=${encodeURIComponent(i.item)}`);
   } catch {
@@ -588,6 +615,7 @@ async function openCompare(i) {
         unitVaries ? el("span", { className: "warn", textContent: "Units differ: per kg, piece or bunch" }) : null,
       ),
     ),
+    unitVaries ? null : priceChart((await history)?.days ?? [], en),
     el(
       "ol",
       { className: "cmp-list", ariaLabel: "Bazars, cheapest first. Tap one to see all its prices" },
@@ -631,6 +659,84 @@ async function openCompare(i) {
       }),
     ),
   );
+}
+
+/**
+ * The item's typical price per day (line) inside the lowest–highest bazar band, 7 or 30 days.
+ * Needs 3 usable days (see usableDays in src/api.ts); until then, says when it will appear.
+ */
+function priceChart(days, name) {
+  const box = el("section", { className: "chart", ariaLabel: `${name} price history` });
+  if (days.length < 3) {
+    box.append(el("p", { className: "chart-note", textContent: "A price chart appears here once there are 3 days of rates." }));
+    return box;
+  }
+  const W = 300; // plot width; price labels sit to its right
+  const H = 150;
+  const draw = (n) => {
+    const d = days.slice(-n);
+    const lo = Math.floor(Math.min(...d.map((x) => x.min)) / 10) * 10;
+    const hi = Math.max(lo + 10, Math.ceil(Math.max(...d.map((x) => x.max)) / 10) * 10);
+    const x = (k) => ((k / (d.length - 1)) * W).toFixed(1);
+    const y = (v) => (6 + (1 - (v - lo) / (hi - lo)) * (H - 6)).toFixed(1);
+    const upper = d.map((p, k) => `${x(k)},${y(p.max)}`);
+    const lower = d.map((p, k) => `${x(k)},${y(p.min)}`).reverse();
+    const last = d[d.length - 1];
+    const ticks = [0, Math.round((d.length - 1) / 2), d.length - 1];
+    const first = d[0];
+    box.replaceChildren(
+      el(
+        "div",
+        { className: "chart-head" },
+        el("span", { textContent: `Typical price, last ${plural(d.length, "day")}` }),
+        days.length > 7
+          ? el(
+              "div",
+              { className: "chart-tabs", role: "group", ariaLabel: "Chart period" },
+              ...[7, 30].map((k) =>
+                el("button", {
+                  type: "button",
+                  className: "chip",
+                  textContent: `${k} days`,
+                  ariaPressed: String(n === k),
+                  onclick: () => draw(k),
+                }),
+              ),
+            )
+          : null,
+      ),
+      svg(
+        "svg",
+        {
+          viewBox: `0 0 ${W + 40} ${H + 22}`,
+          role: "img",
+          "aria-label": `Typical ${name} price from ${rupees(first.median)} on ${dayFmt.format(new Date(`${first.date}T00:00:00Z`))} to ${rupees(last.median)} on ${dayFmt.format(new Date(`${last.date}T00:00:00Z`))}`,
+        },
+        ...[hi, (hi + lo) / 2, lo].flatMap((v) => [
+          svg("line", { class: "grid", x1: 0, x2: W, y1: y(v), y2: y(v) }),
+          svg("text", { x: W + 8, y: (Number(y(v)) + 4).toFixed(1) }, `₹${money(v)}`),
+        ]),
+        svg("path", { class: "band", d: `M${upper.join(" L")} L${lower.join(" L")} Z` }),
+        svg("polyline", { class: "line", points: d.map((p, k) => `${x(k)},${y(p.median)}`).join(" ") }),
+        svg("rect", { class: "end", x: W - 4, y: Number(y(last.median)) - 4, width: 8, height: 8 }),
+        ...ticks.map((k, j) =>
+          svg(
+            "text",
+            { x: x(k), y: H + 18, "text-anchor": j === 0 ? "start" : j === ticks.length - 1 ? "end" : "middle" },
+            dayFmt.format(new Date(`${d[k].date}T00:00:00Z`)),
+          ),
+        ),
+      ),
+      el(
+        "div",
+        { className: "chart-key", ariaHidden: "true" },
+        el("span", {}, el("i", { className: "k-line" }), "Typical price"),
+        el("span", {}, el("i", { className: "k-band" }), "Lowest to highest bazar"),
+      ),
+    );
+  };
+  draw(Math.min(30, days.length) > 7 ? 30 : 7);
+  return box;
 }
 
 function chevron() {

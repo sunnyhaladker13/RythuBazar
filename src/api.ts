@@ -25,6 +25,7 @@ export async function handleApi(req: Request, env: ApiEnv, url: URL): Promise<Re
   if (req.method === "GET" && path === "/api/overview") return respond(await overviewBody(env));
   if (req.method === "GET" && path === "/api/prices") return prices(env, url);
   if (req.method === "GET" && path === "/api/item") return item(env, url);
+  if (req.method === "GET" && path === "/api/history") return history(env, url);
   if (req.method === "GET" && path === "/api/status") return status(env);
   if (req.method === "POST" && path === "/api/admin/scrape") return manualScrape(req, env);
   return json({ error: "not found" }, 404, 0);
@@ -79,7 +80,7 @@ async function prices(env: ApiEnv, url: URL) {
     });
   }
 
-  const [own, before, overviewJson] = await Promise.all([
+  const [own, before, recent, overviewJson] = await Promise.all([
     env.DB.prepare(
       `SELECT item, price, updated_at AS updatedAt FROM prices
         WHERE market_id = ?1 AND date = ?2 ORDER BY item`,
@@ -90,6 +91,10 @@ async function prices(env: ApiEnv, url: URL) {
     env.DB.prepare(`SELECT item, price FROM prices WHERE market_id = ?1 AND date = date(?2, '-1 day')`)
       .bind(marketId, market.latestDate)
       .all<{ item: string; price: number }>(),
+    // This bazar's own last week, for the trend lines (primary-key range, ~175 rows).
+    env.DB.prepare(`SELECT item, date, price FROM prices WHERE market_id = ?1 AND date >= ?2 ORDER BY item, date`)
+      .bind(marketId, daysAgo(TREND_DAYS - 1))
+      .all<{ item: string; date: string; price: number }>(),
     // Each item's spread across bazars is exactly what the overview already computes.
     overviewBody(env),
   ]);
@@ -99,21 +104,30 @@ async function prices(env: ApiEnv, url: URL) {
       { min, max, median, markets },
     ]),
   );
+  const trends = new Map<string, number[]>();
+  for (const r of recent.results) {
+    if (!trends.has(r.item)) trends.set(r.item, []);
+    trends.get(r.item)!.push(r.price);
+  }
   const items = own.results.map((i) => ({
     ...i,
     stats: stats.get(i.item) ?? null,
+    trend: trends.get(i.item) ?? [],
   }));
+  const changes = movers(
+    own.results.map((r) => ({ marketId, ...r })),
+    before.results.map((r) => ({ marketId, ...r })),
+    1,
+    Infinity,
+  );
   return json({
     market: { id: market.id, name: market.name, district: market.district, lastCheckedAt: market.lastCheckedAt },
     date: market.latestDate,
     isToday: market.latestDate === today,
     today,
     items,
-    movers: movers(
-      own.results.map((r) => ({ marketId, ...r })),
-      before.results.map((r) => ({ marketId, ...r })),
-      1,
-    ),
+    changes,
+    movers: changes.slice(0, 3),
   });
 }
 
@@ -133,7 +147,7 @@ type Overview = Awaited<ReturnType<typeof buildOverview>>;
 /** All bazars at once: each item's price range, median and where it's cheapest. */
 async function buildOverview(env: ApiEnv) {
   const today = istDate(new Date());
-  const [rows, counts, before] = await env.DB.batch([
+  const [rows, counts, before, daily] = await env.DB.batch([
     env.DB.prepare(
       `${LATEST}
        SELECT p.market_id AS marketId, p.item, p.price, m.name AS market
@@ -155,7 +169,16 @@ async function buildOverview(env: ApiEnv) {
          FROM latest l
         CROSS JOIN prices p ON p.market_id = l.market_id AND p.date = date(l.date, '-1 day')`,
     ).bind(windowStart()),
+    // ~28 items x 7 days of ready-made daily stats, for the trend lines.
+    env.DB.prepare(`SELECT item, date, median, markets FROM daily_stats WHERE date >= ?1 ORDER BY item, date`).bind(
+      daysAgo(TREND_DAYS - 1),
+    ),
   ]);
+  const trends = new Map<string, DayStat[]>();
+  for (const r of daily.results as DayStat[]) {
+    if (!trends.has(r.item)) trends.set(r.item, []);
+    trends.get(r.item)!.push(r);
+  }
   type Row = { marketId: number; item: string; price: number; market: string };
   const byItem = new Map<string, Row[]>();
   for (const r of rows.results as Row[]) {
@@ -165,11 +188,41 @@ async function buildOverview(env: ApiEnv) {
   const items = [...byItem].map(([item, list]) => {
     const stats = priceStats(list.map((r) => r.price).join(","));
     const cheapest = list.filter((r) => r.price === stats.min).map((r) => r.market);
-    // Every bazar's rate, low to high (the query's order), for the distribution strip.
-    return { item, ...stats, cheapest, prices: list.map((r) => r.price) };
+    return { item, ...stats, cheapest, trend: usableDays(trends.get(item) ?? [], today).map((d) => d.median) };
   });
-  const moved = movers(rows.results as Row[], before.results as Row[], MIN_MOVER_BAZARS);
-  return { today, ...(counts.results[0] as object), items, movers: moved };
+  const changes = movers(rows.results as Row[], before.results as Row[], MIN_MOVER_BAZARS, Infinity);
+  return { today, ...(counts.results[0] as object), items, changes, movers: changes.slice(0, 3) };
+}
+
+const TREND_DAYS = 7;
+const daysAgo = (n: number) => istDate(new Date(Date.now() - n * 86_400_000));
+
+type DayStat = { item: string; date: string; median: number; min?: number; max?: number; markets: number };
+
+/**
+ * Days whose typical price means something: at least 3 bazars. Today is still filling in
+ * through the morning, so it also needs half as many bazars as the day before; otherwise
+ * the first few bazars to post would swing the line.
+ */
+export function usableDays<T extends { date: string; markets: number }>(days: T[], today: string): T[] {
+  const ok = days.filter((d) => d.markets >= 3);
+  const last = ok[ok.length - 1];
+  const prev = ok[ok.length - 2];
+  if (last?.date === today && prev && last.markets * 2 < prev.markets) ok.pop();
+  return ok;
+}
+
+/** One item's typical price and lowest–highest bazar per day, for the item chart. */
+async function history(env: ApiEnv, url: URL) {
+  const name = url.searchParams.get("name")?.trim();
+  if (!name) return json({ error: "name is required" }, 400, 0);
+  const days = Math.min(Math.max(Number(url.searchParams.get("days")) || 30, 2), 90);
+  const { results } = await env.DB.prepare(
+    `SELECT date, median, min, max, markets FROM daily_stats WHERE item = ?1 AND date >= ?2 ORDER BY date`,
+  )
+    .bind(name, daysAgo(days - 1))
+    .all<DayStat>();
+  return json({ item: name, days: usableDays(results, istDate(new Date())) });
 }
 
 type Rate = { marketId: number; item: string; price: number };

@@ -313,6 +313,30 @@ export async function runTick(env: ScrapeEnv, trigger: "cron" | "manual", now = 
         .bind(json(priceRows), nowIso),
     );
   }
+  if (priceRows.length) {
+    // Recompute the day's per-item stats for every date this tick wrote (migrations/0003).
+    // Each market's rows are a primary-key lookup, so this reads ~one day of prices, not all.
+    stmts.push(
+      db
+        .prepare(
+          `INSERT INTO daily_stats (item, date, median, min, max, markets)
+           WITH r AS (
+             SELECT p.item, p.date, p.price,
+                    ROW_NUMBER() OVER (PARTITION BY p.item, p.date ORDER BY p.price) AS rn,
+                    COUNT(*) OVER (PARTITION BY p.item, p.date) AS n
+               FROM (SELECT DISTINCT value AS date FROM json_each(?1)) d
+              CROSS JOIN markets m
+              CROSS JOIN prices p ON p.market_id = m.id AND p.date = d.date
+           )
+           SELECT item, date, AVG(CASE WHEN rn IN ((n + 1) / 2, (n + 2) / 2) THEN price END),
+                  MIN(price), MAX(price), MAX(n)
+             FROM r WHERE true GROUP BY item, date
+           ON CONFLICT(item, date) DO UPDATE
+              SET median = excluded.median, min = excluded.min, max = excluded.max, markets = excluded.markets`,
+        )
+        .bind(json([...new Set(priceRows.map((r) => r.d))])),
+    );
+  }
   // Something the pages show changed, so drop the ready-made API responses (src/snapshot.ts).
   if (stmts.length) stmts.push(db.prepare("DELETE FROM snapshots"));
   stmts.push(

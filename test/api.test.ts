@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { movers, priceStats } from "../src/api";
+import { movers, priceStats, usableDays } from "../src/api";
 
 describe("priceStats", () => {
   it("handles one market", () => {
@@ -45,5 +45,22 @@ describe("movers", () => {
 
   it("only pairs the same bazar's rates", () => {
     expect(movers([r(1, "Tomato", 40)], [r(2, "Tomato", 30)], 1)).toEqual([]);
+  });
+});
+
+describe("usableDays", () => {
+  const d = (date: string, markets: number) => ({ date, markets });
+
+  it("drops days with fewer than 3 bazars", () => {
+    expect(usableDays([d("2026-10-06", 2), d("2026-10-07", 15)], "2026-10-08")).toEqual([d("2026-10-07", 15)]);
+  });
+
+  it("holds back today until half of yesterday's bazars have posted", () => {
+    expect(usableDays([d("2026-10-07", 16), d("2026-10-08", 4)], "2026-10-08")).toEqual([d("2026-10-07", 16)]);
+    expect(usableDays([d("2026-10-07", 16), d("2026-10-08", 8)], "2026-10-08")).toHaveLength(2);
+  });
+
+  it("keeps a thin day when it isn't today", () => {
+    expect(usableDays([d("2026-10-06", 16), d("2026-10-07", 4)], "2026-10-08")).toHaveLength(2);
   });
 });
