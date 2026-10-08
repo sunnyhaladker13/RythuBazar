@@ -121,7 +121,7 @@ const windowStart = () => istDate(new Date(Date.now() - 3 * 86_400_000));
 
 type Overview = Awaited<ReturnType<typeof buildOverview>>;
 
-/** All bazars at once: each item's typical price, range and where it's cheapest. */
+/** All bazars at once: each item's price range, median and where it's cheapest. */
 async function buildOverview(env: ApiEnv) {
   const today = istDate(new Date());
   const [rows, counts] = await env.DB.batch([

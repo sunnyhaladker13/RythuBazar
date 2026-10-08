@@ -22,7 +22,7 @@ Static site (public/): all-bazar overview by default, one bazar via ?market=<id>
 
 1. **Scrape.** The cron Worker posts the rbzts dropdowns (district → market) and parses each market's price table. Prices fill in through the morning, so markets are re-checked until they report. Bazars post between ~07:30 and the 1 PM deadline (8 Oct: Yellandu by 07:30, Kukatpally 09:50, most later). rbzts shows no date, so a table identical to a bazar's previous day is treated as yesterday's still on screen, not today's (`isCarryOver`).
 2. **Store.** Each market's table is saved per IST date. A row is written only when a price changes, and history is never pruned. Price history starts 7 Oct 2026; rbzts has no older data.
-3. **Serve.** The home page shows every item across all bazars: typical (median) price, range, and where it's cheapest. Picking a bazar ("Choose a branch") shows that bazar's own table.
+3. **Serve.** The home page shows every item across all bazars: its price range (lowest–highest) and where it's cheapest. Picking a bazar ("Choose a branch") shows that bazar's own table.
 4. **Share.** Links get a preview card on WhatsApp and social media, and bazar links are titled after their bazar (see below).
 
 ## Project layout

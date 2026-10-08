@@ -1,5 +1,5 @@
 // Rythu Bazar Prices — vanilla client for /api/*.
-// Default view: every bazar at once (typical price, range, where it's cheapest).
+// Default view: every bazar at once (price range, where it's cheapest).
 // ?market=<id> narrows to one bazar.
 
 const $ = (id) => document.getElementById(id);
@@ -191,7 +191,7 @@ async function showAll() {
   els.bazarChipLabel.textContent = "Choose a branch";
   els.bazarChip.lastElementChild.style.display = "";
   els.title.textContent = "Today's rates";
-  els.sub.textContent = "Typical prices across Telangana's Rythu Bazars";
+  els.sub.textContent = "Price ranges across Telangana's Rythu Bazars";
   document.title = "Rythu Bazar rates today";
   setFresh("Loading rates…");
   resetView();
@@ -211,7 +211,7 @@ async function showAll() {
     isToday: true,
     items: data.items.map((i) => ({
       item: i.item,
-      price: i.median,
+      price: i.min, // lowest rate, so "Cheapest first" sorts by it
       stats: { min: i.min, max: i.max, median: i.median, markets: i.markets },
       cheapest: i.cheapest,
     })),
@@ -338,7 +338,7 @@ function verdict(i) {
   if (!state.market) {
     const c = i.cheapest ?? [];
     const where = c.length === 1 ? c[0] : `${c.length} bazars`;
-    return { tone: "plain", text: `Cheapest ${rupees(s.min)} at ${where}` };
+    return { tone: "plain", text: `Cheapest at ${where}` };
   }
   if (i.price <= s.min) return { tone: "good", text: `Lowest of ${n}` };
   if (i.price >= s.max) return { tone: "bad", text: `Highest of ${n}` };
@@ -369,13 +369,13 @@ function renderBoard() {
     const i = items.find((x) => x.item === key);
     if (!i) return null;
     const s = i.stats;
+    const priceText = priceLabel(i);
     let note = "per kg";
     if (s && s.markets > 1) {
-      const range = `${rupees(s.min)}–${money(s.max)}`;
-      if (!state.market) note = `typical · ${range}`;
+      if (!state.market) note = `per kg · ${s.markets} bazars`;
       else {
         const v = verdict(i);
-        note = `${v?.tone === "good" ? "low" : v?.tone === "bad" ? "high" : "typical"} · ${range}`;
+        note = `${v?.tone === "good" ? "low" : v?.tone === "bad" ? "high" : "typical"} · ${rupees(s.min)}–${money(s.max)}`;
       }
     }
     return el(
@@ -384,11 +384,11 @@ function renderBoard() {
         type: "button",
         className: "staple",
         onclick: () => openCompare(i),
-        ariaLabel: `${label} ${rupees(i.price)} per kg${state.market ? "" : " typical"}. Compare bazars`,
+        ariaLabel: `${label} ${priceText} per kg${state.market ? "" : " across bazars"}. Compare bazars`,
       },
       el("span", { className: "label", textContent: label }),
       el("span", { className: "te", textContent: info(key).te }),
-      el("span", { className: "num", textContent: rupees(i.price) }),
+      el("span", { className: `num${priceText.length > 5 ? " small" : ""}`, textContent: priceText }),
       el("span", { className: "note", textContent: note }),
     );
   }).filter(Boolean);
@@ -421,14 +421,14 @@ function row(i) {
   const v = verdict(i);
   const s = i.stats;
   const unitVaries = UNIT_VARIES.has(i.item);
-  const showStrip = comparable(i) && s.max > s.min;
+  // All bazars: the range is the headline, so the strip only earns its place inside one bazar.
+  const showStrip = Boolean(state.market) && comparable(i) && s.max > s.min;
   const pos = (p) => `${((p - s.min) / (s.max - s.min)) * 100}%`;
-  // Mixed units make a single typical price meaningless across bazars, so show the range instead.
-  const priceText = !state.market && unitVaries && s && s.max > s.min ? `${rupees(s.min)}–${money(s.max)}` : rupees(i.price);
+  const priceText = priceLabel(i);
 
   const label = [
     en,
-    `${priceText}${unitVaries ? "" : " per kg"}${state.market ? "" : " typical"}`,
+    `${priceText}${unitVaries ? "" : " per kg"}${state.market ? "" : " across bazars"}`,
     v?.text,
     "Compare bazars",
   ]
@@ -462,7 +462,7 @@ function row(i) {
           ? el(
               "span",
               { className: "strip", ariaHidden: "true" },
-              state.market ? el("span", { className: "tick", style: `left:${pos(s.median)}` }) : null,
+              el("span", { className: "tick", style: `left:${pos(s.median)}` }),
               el("span", { className: "dot", style: `left:${pos(i.price)}` }),
             )
           : null,
@@ -477,6 +477,12 @@ function row(i) {
       ),
     ),
   );
+}
+
+/** All bazars: lowest–highest rate, since one number would hide the spread. One bazar: its own rate. */
+function priceLabel(i) {
+  const s = i.stats;
+  return !state.market && s && s.max > s.min ? `${rupees(s.min)}–${money(s.max)}` : rupees(i.price);
 }
 
 /** Ink or white, whichever reads better on the tile colour. */
@@ -516,7 +522,7 @@ async function openCompare(i) {
   const where = cheapest.length === 1 ? `${cheapest[0].market} at ${rupees(min)}` : `${plural(cheapest.length, "bazar")} at ${rupees(min)}`;
   let summary;
   if (unitVaries) summary = `Bazars sell this by different units, so these rates don't compare directly.`;
-  else if (!here) summary = `Typical price is ${rupees(i.stats.median)}/kg. Cheapest is ${where}.`;
+  else if (!here) summary = `${rupees(min)} to ${rupees(max)}/kg across bazars. Cheapest is ${where}.`;
   else if (cheapest.some((m) => m.marketId === here.id)) summary = `${here.name} is among the cheapest at ${rupees(i.price)}.`;
   else {
     const v = verdict(i);
@@ -656,7 +662,7 @@ function renderMarkets() {
           "span",
           { className: "what" },
           el("span", { className: "en", textContent: "All branches" }),
-          el("span", { className: "sub", textContent: "Typical prices across Telangana" }),
+          el("span", { className: "sub", textContent: "Price ranges across Telangana" }),
         ),
       ),
     ),
