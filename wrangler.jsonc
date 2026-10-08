@@ -18,9 +18,9 @@
     }
   ],
 
-  // Every 5 min, 07:30–16:25 IST. Each tick does only the work that is due and
+  // Every 5 min, 05:30–16:25 IST (some bazars post before 07:30). Each tick does only the work that is due and
   // fits the free-plan budget (50 subrequests, 10 ms CPU), so most ticks are no-ops.
-  "triggers": { "crons": ["*/5 2-10 * * *"] },
+  "triggers": { "crons": ["*/5 0-10 * * *"] },
 
   "vars": {
     // Workers can't fetch() a bare IP (error 1003); sslip.io resolves this name to

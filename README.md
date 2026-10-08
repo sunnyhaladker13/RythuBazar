@@ -12,7 +12,7 @@ Today's vegetable rates at Telangana Rythu Bazars, in one place. It runs entirel
 
 ```
 rbzts (ASP.NET page, no API)
-   │  every 5 min, 07:30–16:25 IST: Worker cron scrapes only what's due (src/scraper/)
+   │  every 5 min, 05:30–16:25 IST: Worker cron scrapes only what's due (src/scraper/)
    ▼
 D1: districts → markets → prices (one row per market / day / item, history kept)
    │  JSON API (src/api.ts)
@@ -20,7 +20,7 @@ D1: districts → markets → prices (one row per market / day / item, history k
 Static site (public/): all-bazar overview by default, one bazar via ?market=<id>
 ```
 
-1. **Scrape.** The cron Worker posts the rbzts dropdowns (district → market) and parses each market's price table. Prices fill in through the morning, so markets are re-checked until they report.
+1. **Scrape.** The cron Worker posts the rbzts dropdowns (district → market) and parses each market's price table. Prices fill in through the morning, so markets are re-checked until they report. Bazars post between ~07:30 and the 1 PM deadline (8 Oct: Yellandu by 07:30, Kukatpally 09:50, most later). rbzts shows no date, so a table identical to a bazar's previous day is treated as yesterday's still on screen, not today's (`isCarryOver`).
 2. **Store.** Each market's table is saved per IST date. A row is written only when a price changes, and history is never pruned. Price history starts 7 Oct 2026; rbzts has no older data.
 3. **Serve.** The home page shows every item across all bazars: typical (median) price, range, and where it's cheapest. Picking a bazar ("Choose a branch") shows that bazar's own table.
 4. **Share.** Links get a preview card on WhatsApp and social media, and bazar links are titled after their bazar (see below).
@@ -45,7 +45,7 @@ Static site (public/): all-bazar overview by default, one bazar via ?market=<id>
 |---|---|
 | 50 subrequests per invocation (fetch **and** D1 both count) | Each tick makes at most `FETCH_BUDGET` = 35 fetches, retries included. D1 adds ≤ 11 (2 reads, 1 lease, ≤ 8 writes in one batch). Rows go to D1 as a single JSON param through `json_each`, so a batch is ~8 statements whatever its size. |
 | 10 ms CPU per invocation | Regex parsing costs ≈ 0.2 ms per page (`npm test` prints it). View-state parsing is skipped on market pages, and network waits don't count as CPU. |
-| 5 cron triggers per account | Uses 1: `*/5 2-10 * * *` (every 5 min, 07:30–16:25 IST). |
+| 5 cron triggers per account | Uses 1: `*/5 0-10 * * *` (every 5 min, 05:30–16:25 IST). |
 | D1: 100k writes / 5M reads per day | Prices are written only when a market's table changes (hash check, plus `ON CONFLICT … WHERE price != excluded.price`). Expect ~1–3k writes per day. |
 | `fetch()` can't target a bare IP (error 1003) | `RBZ_ORIGIN` uses `183-82-5-184.sslip.io`, a public wildcard DNS name that resolves to the IP. IIS ignores the Host header. |
 

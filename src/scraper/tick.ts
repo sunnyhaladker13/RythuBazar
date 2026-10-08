@@ -54,6 +54,20 @@ export function istDate(now: Date): string {
   return new Date(now.getTime() + 330 * 60_000).toISOString().slice(0, 10);
 }
 
+/**
+ * rbzts shows no date, and we scrape from 05:30 IST. A table identical to the one a
+ * market reported on an earlier day is most likely yesterday's still on screen, so
+ * don't stamp it as today's. If the prices really are unchanged, the market just shows
+ * as not yet reported, with the same numbers.
+ */
+export function isCarryOver(
+  prev: Pick<MarketState, "lastReportedDate" | "lastHash"> | undefined,
+  hash: string,
+  reportDate: string,
+): boolean {
+  return !!prev?.lastReportedDate && prev.lastReportedDate < reportDate && prev.lastHash === hash;
+}
+
 /** FNV-1a over the sorted table; detects unchanged tables without async crypto. */
 export function hashRows(rows: PriceRow[]): string {
   const s = rows
@@ -173,9 +187,13 @@ export async function runTick(env: ScrapeEnv, trigger: "cron" | "manual", now = 
           if (table.status === "missing") {
             summary.errors.push(`market ${o.id}: no price grid in response`);
           } else if (table.status === "ok") {
-            summary.reported++;
             const hash = hashRows(table.rows);
             const prev = marketsById.get(o.id);
+            if (isCarryOver(prev, hash, reportDate)) {
+              marketResults.push(result);
+              continue;
+            }
+            summary.reported++;
             Object.assign(result, { reportedDate: reportDate, itemCount: table.rows.length, hash });
             if (prev?.lastHash !== hash || prev?.lastReportedDate !== reportDate) {
               for (const r of table.rows) priceRows.push({ m: o.id, d: reportDate, i: r.item, p: r.price });
