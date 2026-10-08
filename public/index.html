@@ -48,6 +48,7 @@
 
         <p class="fresh" id="fresh" role="status" aria-live="polite"></p>
 
+        <p class="board-label" id="board-label" hidden></p>
         <div class="board" id="board" hidden></div>
       </div>
     </header>
@@ -79,8 +80,13 @@
     <footer class="wrap foot">
       <p>
         <strong>Ranges:</strong> on the all-branches view each price runs from the lowest to the highest rate across bazars that
-        reported in the last three days. When you're viewing one bazar, the strip shows that range: the square is this bazar's
-        rate and the tick is the typical (middle) rate.
+        reported in the last three days. The bars under it show where those bazars sit in the range: taller means more bazars
+        charge that much. When you're viewing one bazar, the strip shows the same range: the square is this bazar's rate and
+        the tick is the typical (middle) rate.
+      </p>
+      <p>
+        <strong>Biggest price moves:</strong> the three items whose rate changed most from one day to the next, by percentage.
+        Across all branches it's the typical bazar's change; inside a bazar, that bazar's own.
       </p>
       <p>
         Rates as published by the Telangana Agricultural Marketing Department's Rythu Bazar Information System, in ₹ per kg.

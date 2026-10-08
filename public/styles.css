@@ -258,6 +258,32 @@ svg {
 .staple .num.small {
   font-size: clamp(22px, 6.6vw, 34px);
 }
+.staple .move {
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.staple .hist {
+  width: 100%;
+  margin: 2px 0;
+}
+.staple .hist span {
+  background: var(--board-text);
+}
+.staple .hist span.none {
+  background: var(--board-sub);
+  opacity: 0.35;
+}
+.board-label {
+  margin: 0 0 -6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+.board-label[hidden] {
+  display: none;
+}
 .staple .note {
   font-size: 11px;
   color: var(--board-sub);
@@ -498,6 +524,21 @@ svg {
   height: 10px;
   margin-left: -5px;
   background: var(--ink);
+}
+.hist {
+  display: flex;
+  align-items: flex-end;
+  gap: 1px;
+  width: 84px;
+  height: 14px;
+}
+.hist span {
+  flex: 1;
+  background: var(--ink);
+}
+.hist span.none {
+  height: 2px;
+  background: var(--track);
 }
 .range {
   width: 84px;

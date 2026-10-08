@@ -79,13 +79,17 @@ async function prices(env: ApiEnv, url: URL) {
     });
   }
 
-  const [own, overviewJson] = await Promise.all([
+  const [own, before, overviewJson] = await Promise.all([
     env.DB.prepare(
       `SELECT item, price, updated_at AS updatedAt FROM prices
         WHERE market_id = ?1 AND date = ?2 ORDER BY item`,
     )
       .bind(marketId, market.latestDate)
       .all<{ item: string; price: number; updatedAt: string }>(),
+    // The day before its latest table, for "biggest moves" (primary-key range, ~25 rows).
+    env.DB.prepare(`SELECT item, price FROM prices WHERE market_id = ?1 AND date = date(?2, '-1 day')`)
+      .bind(marketId, market.latestDate)
+      .all<{ item: string; price: number }>(),
     // Each item's spread across bazars is exactly what the overview already computes.
     overviewBody(env),
   ]);
@@ -105,6 +109,11 @@ async function prices(env: ApiEnv, url: URL) {
     isToday: market.latestDate === today,
     today,
     items,
+    movers: movers(
+      own.results.map((r) => ({ marketId, ...r })),
+      before.results.map((r) => ({ marketId, ...r })),
+      1,
+    ),
   });
 }
 
@@ -124,10 +133,10 @@ type Overview = Awaited<ReturnType<typeof buildOverview>>;
 /** All bazars at once: each item's price range, median and where it's cheapest. */
 async function buildOverview(env: ApiEnv) {
   const today = istDate(new Date());
-  const [rows, counts] = await env.DB.batch([
+  const [rows, counts, before] = await env.DB.batch([
     env.DB.prepare(
       `${LATEST}
-       SELECT p.item, p.price, m.name AS market
+       SELECT p.market_id AS marketId, p.item, p.price, m.name AS market
          FROM latest l
         -- CROSS JOIN pins the order: 40 markets, then a primary-key lookup each (no prices scan).
         CROSS JOIN prices p ON p.market_id = l.market_id AND p.date = l.date
@@ -139,18 +148,66 @@ async function buildOverview(env: ApiEnv) {
               (SELECT COUNT(*) FROM markets WHERE active = 1 AND last_reported_date = ?1) AS reportedToday,
               (SELECT MAX(last_checked_at) FROM markets WHERE active = 1) AS lastCheckedAt`,
     ).bind(today),
+    // Each market's table from the day before its latest one, for "biggest moves".
+    env.DB.prepare(
+      `${LATEST}
+       SELECT p.market_id AS marketId, p.item, p.price
+         FROM latest l
+        CROSS JOIN prices p ON p.market_id = l.market_id AND p.date = date(l.date, '-1 day')`,
+    ).bind(windowStart()),
   ]);
-  const byItem = new Map<string, { price: number; market: string }[]>();
-  for (const r of rows.results as { item: string; price: number; market: string }[]) {
+  type Row = { marketId: number; item: string; price: number; market: string };
+  const byItem = new Map<string, Row[]>();
+  for (const r of rows.results as Row[]) {
     if (!byItem.has(r.item)) byItem.set(r.item, []);
     byItem.get(r.item)!.push(r);
   }
   const items = [...byItem].map(([item, list]) => {
     const stats = priceStats(list.map((r) => r.price).join(","));
     const cheapest = list.filter((r) => r.price === stats.min).map((r) => r.market);
-    return { item, ...stats, cheapest };
+    // Every bazar's rate, low to high (the query's order), for the distribution strip.
+    return { item, ...stats, cheapest, prices: list.map((r) => r.price) };
   });
-  return { today, ...(counts.results[0] as object), items };
+  const moved = movers(rows.results as Row[], before.results as Row[], MIN_MOVER_BAZARS);
+  return { today, ...(counts.results[0] as object), items, movers: moved };
+}
+
+type Rate = { marketId: number; item: string; price: number };
+/** An item counts as moving across bazars only when at least this many bazars have both days. */
+const MIN_MOVER_BAZARS = 3;
+
+/**
+ * The items whose price changed most from one day to the next, biggest relative change first.
+ * Each bazar's change is its latest rate minus its rate the day before; an item's change is the
+ * median of those (so one bazar's typo can't top the board), and `pct` is against the median
+ * earlier rate of the same bazars. Items with no change are left out.
+ */
+export function movers(latest: Rate[], before: Rate[], minBazars: number, limit = 3) {
+  const prev = new Map(before.map((r) => [`${r.marketId}|${r.item}`, r.price]));
+  const pairs = new Map<string, { diffs: number[]; olds: number[] }>();
+  for (const r of latest) {
+    const old = prev.get(`${r.marketId}|${r.item}`);
+    if (old === undefined) continue;
+    if (!pairs.has(r.item)) pairs.set(r.item, { diffs: [], olds: [] });
+    const p = pairs.get(r.item)!;
+    p.diffs.push(r.price - old);
+    p.olds.push(old);
+  }
+  const median = (xs: number[]) => {
+    const s = [...xs].sort((a, b) => a - b);
+    const mid = s.length >> 1;
+    return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+  };
+  return [...pairs]
+    .filter(([, p]) => p.diffs.length >= minBazars)
+    .map(([item, p]) => {
+      const change = median(p.diffs);
+      const base = median(p.olds);
+      return { item, change, pct: base ? Math.round((change / base) * 100) : 0, bazars: p.diffs.length };
+    })
+    .filter((m) => m.change !== 0)
+    .sort((a, b) => Math.abs(b.pct) - Math.abs(a.pct) || Math.abs(b.change) - Math.abs(a.change))
+    .slice(0, limit);
 }
 
 /** Spread of one item's price across markets, from a GROUP_CONCAT list. */

@@ -10,6 +10,7 @@ const els = {
   sub: $("sub"),
   fresh: $("fresh"),
   board: $("board"),
+  boardLabel: $("board-label"),
   controls: $("controls"),
   search: $("search"),
   bazarChip: $("bazar-chip"),
@@ -56,6 +57,7 @@ const ITEMS = {
   "Snake Gourd": ["Snake gourd", "పొట్లకాయ", "#8fb35a"],
   Tomato: ["Tomato", "టమాటా", "#e2412f"],
 };
+// The board shows the biggest price moves; until there are enough (no history yet, or nothing moved), these fill it.
 const STAPLES = [
   ["Tomato", "Tomato"],
   ["Onions-I", "Onion"],
@@ -214,7 +216,9 @@ async function showAll() {
       price: i.min, // lowest rate, so "Cheapest first" sorts by it
       stats: { min: i.min, max: i.max, median: i.median, markets: i.markets },
       cheapest: i.cheapest,
+      prices: i.prices,
     })),
+    movers: data.movers ?? [],
   };
   if (!data.items.length) {
     setFresh(`No bazar has posted rates yet${checked}`, true);
@@ -337,8 +341,8 @@ function verdict(i) {
   if (s.min === s.max) return { tone: "plain", text: `Same price at all ${n}` };
   if (!state.market) {
     const c = i.cheapest ?? [];
-    const where = c.length === 1 ? c[0] : `${c.length} bazars`;
-    return { tone: "plain", text: `Cheapest at ${where}` };
+    if (c.length === 1) return { tone: "plain", text: `Cheapest at ${place(c[0])}` };
+    return { tone: "plain", text: `${rupees(s.min)} at ${c.length} of ${n}` };
   }
   if (i.price <= s.min) return { tone: "good", text: `Lowest of ${n}` };
   if (i.price >= s.max) return { tone: "bad", text: `Highest of ${n}` };
@@ -365,11 +369,20 @@ function compareDeals(a, b) {
 
 function renderBoard() {
   const items = state.current?.items ?? [];
-  const tiles = STAPLES.map(([key, label]) => {
+  const moves = new Map((state.current?.movers ?? []).map((m) => [m.item, m]));
+  // Biggest movers first, then staples so the board stays three wide.
+  const picks = [...moves.keys(), ...STAPLES.map(([key]) => key)]
+    .filter((key, n, all) => all.indexOf(key) === n && items.some((x) => x.item === key))
+    .slice(0, 3);
+  els.boardLabel.textContent = moves.size ? "Biggest price moves since the day before" : "Daily staples";
+  const tiles = picks.map((key) => {
     const i = items.find((x) => x.item === key);
-    if (!i) return null;
+    // Tiles are narrow: "Okra (bhindi)" → "Okra".
+    const label = STAPLES.find(([k]) => k === key)?.[1] ?? info(key).en.replace(/\s*\(.*\)$/, "");
+    const move = moves.get(key);
     const s = i.stats;
     const priceText = priceLabel(i);
+    const showHist = !state.market && comparable(i) && s.max > s.min && i.prices?.length > 1;
     let note = "per kg";
     if (s && s.markets > 1) {
       if (!state.market) note = `per kg · ${s.markets} bazars`;
@@ -384,16 +397,31 @@ function renderBoard() {
         type: "button",
         className: "staple",
         onclick: () => openCompare(i),
-        ariaLabel: `${label} ${priceText} per kg${state.market ? "" : " across bazars"}. Compare bazars`,
+        ariaLabel: [
+          `${label} ${priceText} per kg${state.market ? "" : " across bazars"}`,
+          move ? `${move.change > 0 ? "up" : "down"} ${rupees(Math.abs(move.change))}, ${Math.abs(move.pct)}%` : "",
+          "Compare bazars",
+        ]
+          .filter(Boolean)
+          .join(". "),
       },
       el("span", { className: "label", textContent: label }),
       el("span", { className: "te", textContent: info(key).te }),
       el("span", { className: `num${priceText.length > 5 ? " small" : ""}`, textContent: priceText }),
+      move
+        ? el("span", {
+            className: "move",
+            ariaHidden: "true",
+            textContent: `${move.change > 0 ? "▲" : "▼"} ${rupees(Math.abs(move.change))} · ${Math.abs(move.pct)}%`,
+          })
+        : null,
+      showHist ? histogram(i.prices, s) : null,
       el("span", { className: "note", textContent: note }),
     );
-  }).filter(Boolean);
+  });
   els.board.replaceChildren(...tiles);
   els.board.hidden = tiles.length === 0;
+  els.boardLabel.hidden = tiles.length === 0;
 }
 
 function render() {
@@ -425,6 +453,7 @@ function row(i) {
   const showStrip = Boolean(state.market) && comparable(i) && s.max > s.min;
   const pos = (p) => `${((p - s.min) / (s.max - s.min)) * 100}%`;
   const priceText = priceLabel(i);
+  const showHist = !state.market && comparable(i) && s.max > s.min && i.prices?.length > 1;
 
   const label = [
     en,
@@ -466,6 +495,7 @@ function row(i) {
               el("span", { className: "dot", style: `left:${pos(i.price)}` }),
             )
           : null,
+        showHist ? histogram(i.prices, s) : null,
         showStrip
           ? el(
               "span",
@@ -478,6 +508,22 @@ function row(i) {
     ),
   );
 }
+
+/** How the bazars spread across the range: one column per tenth of it, taller where more bazars charge that. */
+function histogram(prices, s) {
+  const BINS = 10;
+  const counts = Array(BINS).fill(0);
+  for (const p of prices) counts[Math.min(BINS - 1, Math.floor(((p - s.min) / (s.max - s.min)) * BINS))]++;
+  const top = Math.max(...counts);
+  return el(
+    "span",
+    { className: "hist", ariaHidden: "true" },
+    ...counts.map((n) => el("span", { className: n ? "" : "none", style: n ? `height:${4 + (n / top) * 10}px` : "" })),
+  );
+}
+
+/** rbzts writes "Miryalaguda(NSP Camp)"; give the bracket a space so it wraps like a name. */
+const place = (name) => name.replace(/\s*\(/, " (");
 
 /** All bazars: lowest–highest rate, since one number would hide the spread. One bazar: its own rate. */
 function priceLabel(i) {
