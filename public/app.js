@@ -563,7 +563,10 @@ function initChart() {
   }
 }
 
-/** Cheapest first (as the server sends it), Nearest (asks for location on the first tap) or A–Z. */
+/**
+ * Cheapest first (as the server sends it), Nearest (asks for location on the first tap) or A–Z.
+ * Once the location is known, every row shows its distance and branches at the same price go nearest first.
+ */
 function initBranchSort() {
   const list = $("branches");
   if (!list) return;
@@ -574,7 +577,11 @@ function initBranchSort() {
   const place = (li) => ({ lat: Number(li.dataset.lat), lng: Number(li.dataset.lng) });
   const dist = (li) => (li.dataset.lat ? km(state.here, place(li)) : Infinity);
   const by = {
-    cheap: (a, b) => a.dataset.price - b.dataset.price || a.dataset.age - b.dataset.age || a.dataset.name.localeCompare(b.dataset.name),
+    cheap: (a, b) =>
+      a.dataset.price - b.dataset.price ||
+      (state.here ? dist(a) - dist(b) : 0) ||
+      a.dataset.age - b.dataset.age ||
+      a.dataset.name.localeCompare(b.dataset.name),
     near: (a, b) => dist(a) - dist(b),
     az: (a, b) => a.dataset.name.localeCompare(b.dataset.name),
   };
@@ -583,7 +590,7 @@ function initBranchSort() {
     for (const c of chips) c.setAttribute("aria-pressed", String(c.dataset.vsort === sort));
     list.replaceChildren(...rows.slice().sort(by[sort]));
     for (const li of rows) {
-      li.querySelector(".km").textContent = sort === "near" && li.dataset.lat ? ` · about ${kmText(dist(li))}` : "";
+      li.querySelector(".km").textContent = state.here && li.dataset.lat ? ` · about ${kmText(dist(li))}` : "";
     }
   };
   if (canLocate && rows.some((li) => li.dataset.lat)) nearChip.hidden = false;
@@ -601,6 +608,8 @@ function initBranchSort() {
       apply();
     });
   }
+  // Shared their location before: distances straight away, without a prompt.
+  quietLocate().then((here) => here && apply());
 }
 
 // ---------- Boot ----------
