@@ -151,8 +151,8 @@ function footer(long: boolean): Html {
         ? html`<p>
         <strong>Ranges:</strong> on the all-branches view each price runs from the lowest to the highest rate across branches that
         reported in the last three days. The small line under it is the typical price over the last week, and an arrow shows
-        the change since the day before (no arrow: no change). When you're viewing one branch, the strip shows the same range:
-        the square is this branch's rate and the tick is the typical (middle) rate.
+        the change since the day before (no arrow: no change). When you're viewing one branch, the line and arrow are that
+        branch's own rate over the last week and since the day before.
       </p>
       <p>
         <strong>Biggest price moves:</strong> the three items whose rate changed most from one day to the next, by percentage.
@@ -266,6 +266,12 @@ const priceLabel = (i: ListItem, branch: boolean) =>
 const moveText = (m: Move) => `${m.change > 0 ? "▲" : "▼"} ${rupees(Math.abs(m.change))}`;
 const moveWords = (m: Move) => `${m.change > 0 ? "up" : "down"} ${rupees(Math.abs(m.change))}`;
 
+/**
+ * An item's line for the last week: one branch's own rates, or across branches the typical rate. Across branches it's
+ * left out where branches sell by different units (per kg, piece or bunch): their typical rate mixes them.
+ */
+const trendLine = (i: ListItem, branch: boolean) => (!branch && UNIT_VARIES.has(i.item) ? null : sparkline(i.trend));
+
 /** A small line of the last week's prices, stock-app style. Three days is the least that shows a trend. */
 function sparkline(values: number[]): Html | null {
   if (!values || values.length < 3) return null;
@@ -312,7 +318,7 @@ function board(items: ListItem[], movers: Move[], branch: boolean): Html | null 
       aria,
       html`<span class="label">${label}</span><span class="te">${i.te}</span><span class="num${priceText.length > 5 ? " small" : ""}">${priceText}</span>${
         move ? html`<span class="move" aria-hidden="true">${moveText(move)} · ${Math.abs(move.pct)}%</span>` : ""
-      }${sparkline(i.trend)}<span class="note">${note}</span>`,
+      }${trendLine(i, branch)}<span class="note">${note}</span>`,
     );
   });
   return html`<p class="board-label">${moves.size ? "Biggest price moves since the day before" : "Daily staples"}</p>
@@ -329,13 +335,11 @@ function itemRow(i: ListItem, move: Move | undefined, branch: boolean, deal: num
       }
     : verdict(i, branch);
   const unitVaries = UNIT_VARIES.has(i.item);
-  // All branches: the range is the headline, so the strip only earns its place inside one branch.
-  const showStrip = branch && comparable(i) && s!.max > s!.min;
-  const pos = (p: number) => `${((p - s!.min) / (s!.max - s!.min)) * 100}%`;
   const priceText = priceLabel(i, branch);
-  // All branches: the last week's trend and the change since the day before, under the range.
-  const spark = branch ? null : sparkline(i.trend);
-  const change = branch || !move ? null : move;
+  // The last week's trend and the change since the day before, under the price. How this branch
+  // compares with the others is the badge's job.
+  const spark = trendLine(i, branch);
+  const change = move ?? null;
   const label = [
     i.en,
     `${priceText}${unitVaries ? "" : " per kg"}${branch ? "" : " across branches"}`,
@@ -351,18 +355,10 @@ function itemRow(i: ListItem, move: Move | undefined, branch: boolean, deal: num
   }</span><span class="cost"><span class="num${priceText.length > 5 ? " small" : ""}">${priceText}${
     unitVaries ? "" : html`<span class="unit">/kg</span>`
   }</span>${
-    showStrip
-      ? html`<span class="strip" aria-hidden="true"><span class="tick" style="left:${pos(s!.median)}"></span><span class="dot" style="left:${pos(i.price)}"></span></span>`
-      : ""
-  }${
     spark || change
       ? html`<span class="meta" aria-hidden="true">${spark}${
           change ? html`<span class="chg ${change.change > 0 ? "up" : "down"}">${moveText(change)}</span>` : ""
         }</span>`
-      : ""
-  }${
-    showStrip
-      ? html`<span class="range" aria-hidden="true"><span>${rupees(s!.min)}</span><span>${rupees(s!.max)}</span></span>`
       : ""
   }</span>`;
   const q = `${i.item} ${i.en}`.toLowerCase() + ` ${i.te}`;

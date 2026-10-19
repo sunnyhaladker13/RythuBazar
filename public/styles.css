@@ -506,37 +506,7 @@ svg {
   color: var(--muted);
 }
 
-.strip {
-  position: relative;
-  width: 84px;
-  height: 10px;
-}
-.strip::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 4px;
-  height: 2px;
-  background: var(--track);
-}
-.strip .tick {
-  position: absolute;
-  top: 0;
-  width: 2px;
-  height: 10px;
-  margin-left: -1px;
-  background: var(--tick);
-}
-.strip .dot {
-  position: absolute;
-  top: 0;
-  width: 10px;
-  height: 10px;
-  margin-left: -5px;
-  background: var(--ink);
-}
-/* Trend line + change under the range: quiet, so the price stays the headline. */
+/* Trend line + change under the price: quiet, so the price stays the headline. */
 .meta {
   display: flex;
   align-items: center;
@@ -568,15 +538,6 @@ svg {
 .chg.down {
   color: var(--down);
 }
-.range {
-  width: 84px;
-  display: flex;
-  justify-content: space-between;
-  font-size: 10px;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-}
-
 /* ---------- Notices (stale / not reported) ---------- */
 
 .notice {
