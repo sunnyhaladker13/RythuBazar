@@ -206,6 +206,9 @@ svg {
   border-radius: 50%;
   background: currentColor;
 }
+.fresh time {
+  white-space: nowrap;
+}
 .fresh:empty::before {
   display: none;
 }

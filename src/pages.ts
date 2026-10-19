@@ -865,8 +865,10 @@ export function vegetablePage(ctx: Ctx, d: VegData): string {
 
   let updated: Html;
   if (postedToday.length) {
-    const latest = postedToday.reduce((t, r) => (r.updatedAt > t ? r.updatedAt : t), "");
-    updated = html`<p class="fresh"><span>Updated ${ago(latest)}</span></p>`;
+    // Named, because the newest post is often far down a cheapest-first list, where a bare time looks wrong.
+    // Short: "Nalgonda (Beet Market, Hyd Road)" → "Nalgonda", so it stays on the row beside the period chips.
+    const latest = postedToday.reduce((t, r) => (r.updatedAt > t.updatedAt ? r : t));
+    updated = html`<p class="fresh"><span>Latest: ${latest.name.replace(/\s*\(.*\)$/, "")}, ${ago(latest.updatedAt)}</span></p>`;
   } else if (rows.length) {
     const latest = rows.reduce((t, r) => (r.date > t ? r.date : t), "");
     updated = html`<p class="fresh stale">Latest rates from ${fmtDate(latest)}</p>`;

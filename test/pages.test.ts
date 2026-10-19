@@ -97,6 +97,7 @@ describe("vegetable page", () => {
     expect(page).toContain("₹23 a kg at Erragadda, the one Rythu Bazar that posted it today (Mon, 19 Oct).");
     expect(page).toContain('href="https://example.in/vegetables/tomato"');
     expect(page).toContain("₹23–30 at 2 branches · 1 posted today");
+    expect(page).toContain("Latest: Erragadda, <time");
     expect(page).toContain("The typical rate is ₹23 a kg, the same as yesterday and ₹4 less than a week ago (₹27 on 12 Oct).");
     expect(page).toContain("2 days ago");
     expect(page).not.toContain("noindex");
