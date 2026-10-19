@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { movers, priceStats, usableDays } from "../src/api";
+import { boardDay, movers, priceStats, usableDays } from "../src/api";
 import { describe as label } from "../src/items";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -65,6 +65,29 @@ describe("usableDays", () => {
 
   it("keeps a thin day when it isn't today", () => {
     expect(usableDays([d("2026-10-06", 16), d("2026-10-07", 4)], "2026-10-08")).toHaveLength(2);
+  });
+});
+
+describe("boardDay", () => {
+  const d = (date: string, markets: number) => ({ date, markets });
+  const today = "2026-10-19";
+
+  it("shows today once enough branches have posted", () => {
+    expect(boardDay(today, 6, [d("2026-10-18", 10)])).toBe(today);
+  });
+
+  it("shows yesterday until then", () => {
+    expect(boardDay(today, 3, [d("2026-10-17", 15), d("2026-10-18", 10)])).toBe("2026-10-18");
+  });
+
+  it("skips a thin day for the last one that had enough", () => {
+    expect(boardDay(today, 0, [d("2026-10-17", 15), d("2026-10-18", 2)])).toBe("2026-10-17");
+  });
+
+  it("falls back to the busiest day, today on a tie, and to nothing when nobody posted", () => {
+    expect(boardDay(today, 2, [d("2026-10-17", 4), d("2026-10-18", 2)])).toBe("2026-10-17");
+    expect(boardDay(today, 4, [d("2026-10-18", 4)])).toBe(today);
+    expect(boardDay(today, 0, [])).toBeNull();
   });
 });
 

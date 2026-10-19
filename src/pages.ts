@@ -7,6 +7,8 @@ import type { DayStat, Market, Overview, Prices } from "./api";
 import { bazarLabel, branchName, placeOf, shortName } from "./branches";
 import {
   addDays,
+  cap,
+  dayWord,
   daysBetween,
   fmtDate,
   fmtDay,
@@ -149,8 +151,8 @@ function footer(long: boolean): Html {
     ${
       long
         ? html`<p>
-        <strong>Ranges:</strong> on the all-branches view each price runs from the lowest to the highest rate across branches that
-        reported in the last three days. The small line under it is the typical price over the last week, and an arrow shows
+        <strong>Ranges:</strong> on the all-branches view each price runs from the lowest to the highest rate across the branches
+        that posted today. Early in the morning, until enough branches have posted, it shows yesterday's rates. The small line under it is the typical price over the last week, and an arrow shows
         the change since the day before (no arrow: no change). When you're viewing one branch, the line and arrow are that
         branch's own rate over the last week and since the day before.
       </p>
@@ -450,8 +452,11 @@ export function homePage(ctx: Ctx, o: Overview, markets: Market[]): string {
     trend: i.trend ?? [],
   }));
   const checked = checkedText(o.lastCheckedAt);
+  // Every rate on the board is from this one day: today's, or before enough branches post, an earlier day's.
+  const day = o.date ?? o.today;
+  const whose = (d: string) => cap(dayWord(d, o.today)) + "'s";
   const fresh = items.length
-    ? html`<p class="fresh${o.reportedToday === 0 ? " stale" : ""}" id="fresh" role="status" aria-live="polite">${o.reportedToday} of ${o.markets} branches reported today${checked}</p>`
+    ? html`<p class="fresh${o.reportedToday === 0 ? " stale" : ""}" id="fresh" role="status" aria-live="polite">${o.reportedToday} of ${o.markets} branches posted today${checked}</p>`
     : html`<p class="fresh stale" id="fresh" role="status" aria-live="polite">No branch has posted rates yet${checked}</p>`;
   const staples = STAPLES.map(([key, name]) => [o.items.find((i) => i.item === key), name] as const)
     .filter(([i]) => i)
@@ -460,7 +465,7 @@ export function homePage(ctx: Ctx, o: Overview, markets: Market[]): string {
       <div class="wrap top-inner">
         <div class="eyebrow"><span>Rythu Bazar Prices</span><span>${fmtDate(o.today)}</span></div>
         <div class="title">
-          <h1 class="market-name">Today's rates</h1>
+          <h1 class="market-name">${whose(day)} rates</h1>
           <p class="market-sub">Price ranges across Telangana's Rythu Bazars</p>
         </div>
         ${fresh}
@@ -487,7 +492,7 @@ export function homePage(ctx: Ctx, o: Overview, markets: Market[]): string {
     path: "/",
     title: "Rythu Bazar rates today | Vegetable prices in Hyderabad & Telangana",
     description: staples.length
-      ? `${fmtDay(o.today)}: ${staples.join(", ")} a kg at Telangana's Rythu Bazars. Every branch's rates, updated through the day.`
+      ? `${fmtDay(day)}: ${staples.join(", ")} a kg at Telangana's Rythu Bazars. Every branch's rates, updated through the day.`
       : "Today's vegetable rates at every Telangana Rythu Bazar, updated through the day.",
     page: "home",
     body,
@@ -714,10 +719,15 @@ function trend(days: DayStat[], from: number, key: string, name: string, shown: 
 function vegFaq(d: VegData, name: string, unitVaries: boolean): [string, string][] {
   const out: [string, string][] = [];
   const n = lower(name);
-  const { rows, today } = d;
+  const { today } = d;
+  const { date, rows } = latestDay(d.rows);
+  const isToday = date === today;
   const prices = rows.map((r) => r.price);
   const min = Math.min(...prices);
   const max = Math.max(...prices);
+  const span = min === max ? rupees(min) : `${rupees(min)} to ${rupees(max)}`;
+  const when = isToday ? `today (${fmtDate(today)})` : `on ${fmtDate(date)}`;
+  const intro = isToday ? "" : `No branch has posted a ${n} rate today yet. `;
   if (!rows.length) {
     out.push([
       `What is the ${n} price today?`,
@@ -728,25 +738,28 @@ function vegFaq(d: VegData, name: string, unitVaries: boolean): [string, string]
   } else if (unitVaries) {
     out.push([
       `What is the ${n} price today?`,
-      `${rupees(min)} to ${rupees(max)} at Telangana's Rythu Bazars on ${fmtDate(today)}. Some branches sell it per piece or bunch rather than per kg, so the rates don't compare directly.`,
+      `${intro}${span} at ${plural(rows.length, "Rythu Bazar")} ${when}. Some branches sell it per piece or bunch rather than per kg, so the rates don't compare directly.`,
     ]);
   } else {
     const hyd = rows.filter(inHyderabad);
     const hp = hyd.map((r) => r.price);
+    const it = isToday ? "it's" : "it was";
     let city = "";
-    if (hyd.length) {
+    // One branch in all: the sentence before already names it.
+    if (hyd.length && rows.length > 1) {
       const hmin = Math.min(...hp);
       const hmax = Math.max(...hp);
-      if (hyd.length === 1) city = ` It's ${rupees(hmin)} at ${hyd[0].name}, the one Hyderabad branch with a recent rate.`;
-      else if (hmin === hmax) city = ` It's ${rupees(hmin)} at all ${hyd.length} Hyderabad branches with recent rates.`;
-      else city = ` In Hyderabad it's ${rupees(hmin)} to ${rupees(hmax)} across ${hyd.length} branches.`;
+      if (hyd.length === 1) city = ` ${cap(it)} ${rupees(hmin)} at ${hyd[0].name}, the one Hyderabad branch among them.`;
+      else if (hmin === hmax) city = ` ${cap(it)} ${rupees(hmin)} at all ${hyd.length} Hyderabad branches.`;
+      else city = ` In Hyderabad ${it} ${rupees(hmin)} to ${rupees(hmax)} across ${hyd.length} branches.`;
     }
-    out.push([
-      `What is the ${n} price today?`,
-      (min === max
-        ? `${rupees(min)} a kg at all ${rows.length} Rythu Bazars with recent rates on ${fmtDate(today)}.`
-        : `${rupees(min)} to ${rupees(max)} a kg at Telangana's Rythu Bazars on ${fmtDate(today)}.`) + city,
-    ]);
+    const where =
+      rows.length === 1
+        ? `${rows[0].name}, the one Rythu Bazar that posted it`
+        : min === max
+          ? `all ${rows.length} Rythu Bazars that posted it`
+          : plural(rows.length, "Rythu Bazar");
+    out.push([`What is the ${n} price today?`, `${intro}${span} a kg at ${where} ${when}.${city}`]);
   }
 
   const days = d.days;
@@ -780,10 +793,16 @@ function vegFaq(d: VegData, name: string, unitVaries: boolean): [string, string]
   return out;
 }
 
+/** The rows from the latest day anyone posted this item, so a dated sentence never mixes in a branch's older table. */
+function latestDay(rows: VegData["rows"]) {
+  const date = rows.reduce((a, r) => (r.date > a ? r.date : a), "");
+  return { date, rows: rows.filter((r) => r.date === date) };
+}
+
 function vegDescription(d: VegData, name: string, unitVaries: boolean): string {
-  const { rows } = d;
-  if (!rows.length) return `${name} rates at Telangana's Rythu Bazars: every branch's latest rate and the price trend.`;
-  const day = fmtDay(d.today);
+  if (!d.rows.length) return `${name} rates at Telangana's Rythu Bazars: every branch's latest rate and the price trend.`;
+  const { date, rows } = latestDay(d.rows);
+  const day = fmtDay(date);
   const prices = rows.map((r) => r.price);
   const min = Math.min(...prices);
   const max = Math.max(...prices);
@@ -793,7 +812,8 @@ function vegDescription(d: VegData, name: string, unitVaries: boolean): string {
   }
   const hyd = rows.filter(inHyderabad);
   if (min === max) {
-    return `${day}: ${name} is ${rupees(min)} a kg at all ${n} Rythu Bazars with recent rates${
+    if (n === 1) return `${day}: ${name} is ${rupees(min)} a kg at ${rows[0].name}, the one Rythu Bazar that posted it. Every branch's rate.`;
+    return `${day}: ${name} is ${rupees(min)} a kg at all ${n} Rythu Bazars that posted it${
       hyd.length > 1 ? `, including all ${hyd.length} in Hyderabad` : ""
     }. Every branch's rate.`;
   }
@@ -996,13 +1016,14 @@ function hubHeader(today: string, title: string, sub: string): Html {
 export function vegetablesHub(ctx: Ctx, o: Overview): string {
   const stats = new Map(o.items.map((i) => [i.item, i]));
   const keys = Object.keys(ITEMS).sort((a, b) => ITEMS[a][0].localeCompare(ITEMS[b][0]));
-  const body = html`${hubHeader(o.today, "Vegetables", "Today's price ranges across Telangana's Rythu Bazars")}
+  const day = dayWord(o.date ?? o.today, o.today);
+  const body = html`${hubHeader(o.today, "Vegetables", `${cap(day)}'s price ranges across Telangana's Rythu Bazars`)}
     <main class="wrap main">
       <ul class="prices">${keys.map((key) => {
         const [en, te, color] = ITEMS[key];
         const s = stats.get(key);
         const unitVaries = UNIT_VARIES.has(key);
-        const sub = s ? plural(s.markets, "branch", "branches") : "No rates in the last 3 days";
+        const sub = s ? plural(s.markets, "branch", "branches") : `Not posted ${day === "today" || day === "yesterday" ? day : `on ${day}`}`;
         const price = s ? (unitVaries ? "" : range(s.min, s.max)) : "";
         return html`<li><a class="row" href="/vegetables/${itemSlug(key)}">${tile(en, te, color)}<span class="what"><span class="en">${en}</span><span class="te">${te}</span><span class="badge plain">${sub}</span></span><span class="cost">${
           price ? html`<span class="num${price.length > 5 ? " small" : ""}">${price}<span class="unit">/kg</span></span>` : ""

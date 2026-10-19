@@ -1,7 +1,7 @@
 // Ready-made JSON for the busiest endpoints. Building /api/overview reads ~920 D1 rows;
 // serving the saved copy reads 1. A snapshot is rebuilt on the next request when:
 // - the scraper wrote anything the pages show (tick.ts deletes all snapshots), or
-// - the IST date rolled over ("today", "reported today" and the 3-day window move), or
+// - the IST date rolled over ("today", "reported today", the board's day and the 3-day window move), or
 // - it is older than MAX_AGE_MS, a backstop for anything the other two miss.
 
 import { istDate } from "./scraper/tick";

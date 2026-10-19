@@ -3,6 +3,7 @@
 // they match what public/app.js prints with Intl ("Mon, 19 Oct", "12:05 pm").
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAY_MS = 864e5;
 
@@ -33,6 +34,12 @@ export function istTime(iso: string): string {
   return `${h % 12 || 12}:${String(d.getUTCMinutes()).padStart(2, "0")} ${h < 12 ? "am" : "pm"}`;
 }
 
+/** A day within the last week, from today's side: "today", "yesterday", "Saturday". */
+export const dayWord = (ymd: string, today: string) => {
+  const n = daysBetween(ymd, today);
+  return n <= 0 ? "today" : n === 1 ? "yesterday" : DAY_NAMES[utc(ymd).getUTCDay()];
+};
+
 export const daysBetween = (from: string, to: string) => Math.round((utc(to).getTime() - utc(from).getTime()) / DAY_MS);
 export const addDays = (ymd: string, n: number) => new Date(utc(ymd).getTime() + n * DAY_MS).toISOString().slice(0, 10);
 
@@ -51,6 +58,9 @@ export const slugify = (s: string) =>
     .replace(/&/g, " and ")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+
+/** "yesterday" → "Yesterday" */
+export const cap = (s: string) => s[0].toUpperCase() + s.slice(1);
 
 /** A vegetable's name inside a sentence: "Tomato" → "tomato", but "French beans" keeps its capital. */
 export const lower = (name: string) => (/^French\b/.test(name) ? name : name[0].toLowerCase() + name.slice(1));

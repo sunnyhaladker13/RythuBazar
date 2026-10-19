@@ -130,11 +130,12 @@ async function buildPrices(env: ApiEnv, marketId: number) {
     // Each item's spread across bazars is exactly what the overview already computes.
     overviewBody(env),
   ]);
+  // Each item's spread across bazars, compared only with a table from the same day as the board.
+  const board = JSON.parse(overviewJson) as Overview;
   const stats = new Map<string, { min: number; max: number; median: number; markets: number }>(
-    (JSON.parse(overviewJson) as Overview).items.map(({ item, min, max, median, markets }) => [
-      item,
-      { min, max, median, markets },
-    ]),
+    board.date === market.latestDate
+      ? board.items.map(({ item, min, max, median, markets }) => [item, { min, max, median, markets }])
+      : [],
   );
   const trends = new Map<string, number[]>();
   for (const r of recent.results) {
@@ -177,46 +178,89 @@ export const LATEST = `WITH latest AS (
    WHERE active = 1 AND last_reported_date >= ?1)`;
 export const windowStart = () => istDate(new Date(Date.now() - 3 * 86_400_000));
 
+/**
+ * Fewest branches that make a day worth showing on the all-branches board. Until today has this many,
+ * the board shows the last day that did (usually yesterday), so its rates are always from one day.
+ */
+export const MIN_BOARD_BRANCHES = 6;
+
+/**
+ * The day the all-branches board shows: today once enough branches have posted, else the latest
+ * earlier day that had enough. If none did, the busiest day, today included; null when nobody posted.
+ */
+export function boardDay(today: string, postedToday: number, earlier: { date: string; markets: number }[]): string | null {
+  if (postedToday >= MIN_BOARD_BRANCHES) return today;
+  const days = earlier.filter((d) => d.date < today).sort((a, b) => b.date.localeCompare(a.date));
+  const full = days.find((d) => d.markets >= MIN_BOARD_BRANCHES);
+  if (full) return full.date;
+  const busiest = days.reduce((a, b) => (b.markets > a.markets ? b : a), { date: today, markets: postedToday });
+  return busiest.markets ? busiest.date : null;
+}
+
 export type Overview = Awaited<ReturnType<typeof buildOverview>>;
 
-/** All bazars at once: each item's price range, median and where it's cheapest. */
+/** All bazars at once, from one day's tables (boardDay): each item's price range, median and where it's cheapest. */
 async function buildOverview(env: ApiEnv) {
   const today = istDate(new Date());
-  const [rows, counts, before, daily] = await env.DB.batch([
-    env.DB.prepare(
-      `${LATEST}
-       SELECT p.market_id AS marketId, p.item, p.price, m.name AS market
-         FROM latest l
-        -- CROSS JOIN pins the order: 40 markets, then a primary-key lookup each (no prices scan).
-        CROSS JOIN prices p ON p.market_id = l.market_id AND p.date = l.date
-         JOIN markets m ON m.id = p.market_id
-        ORDER BY p.item, p.price, m.name`,
-    ).bind(windowStart()),
+  const [counts, daily] = await env.DB.batch([
     env.DB.prepare(
       `SELECT (SELECT COUNT(*) FROM markets WHERE active = 1) AS markets,
               (SELECT COUNT(*) FROM markets WHERE active = 1 AND last_reported_date = ?1) AS reportedToday,
               (SELECT MAX(last_checked_at) FROM markets WHERE active = 1) AS lastCheckedAt`,
     ).bind(today),
-    // Each market's table from the day before its latest one, for "biggest moves".
-    env.DB.prepare(
-      `${LATEST}
-       SELECT p.market_id AS marketId, p.item, p.price
-         FROM latest l
-        CROSS JOIN prices p ON p.market_id = l.market_id AND p.date = date(l.date, '-1 day')`,
-    ).bind(windowStart()),
-    // ~28 items x 7 days of ready-made daily stats, for the trend lines.
+    // ~28 items x 7 days of ready-made daily stats, for the trend lines and how many branches posted each day.
     env.DB.prepare(`SELECT item, date, median, markets FROM daily_stats WHERE date >= ?1 ORDER BY item, date`).bind(
       daysAgo(TREND_DAYS - 1),
     ),
   ]);
+  const { markets, reportedToday, lastCheckedAt } = counts.results[0] as {
+    markets: number;
+    reportedToday: number;
+    lastCheckedAt: string | null;
+  };
+  // Branches that posted on a day = the most that posted any one item that day.
+  const perDay = new Map<string, number>();
+  for (const r of daily.results as DayStat[]) perDay.set(r.date, Math.max(perDay.get(r.date) ?? 0, r.markets));
+  const date = boardDay(
+    today,
+    reportedToday,
+    [...perDay].map(([date, markets]) => ({ date, markets })),
+  );
+
+  type Row = { marketId: number; item: string; price: number; market: string };
+  let rows: Row[] = [];
+  let before: Row[] = [];
+  if (date) {
+    const [own, prev] = await env.DB.batch([
+      env.DB.prepare(
+        `SELECT p.market_id AS marketId, p.item, p.price, m.name AS market
+           FROM markets m
+          -- CROSS JOIN pins the order: 40 markets, then a primary-key lookup each (no prices scan).
+          CROSS JOIN prices p ON p.market_id = m.id AND p.date = ?1
+          WHERE m.active = 1
+          ORDER BY p.item, p.price, m.name`,
+      ).bind(date),
+      // Each market's table from the day before, for "biggest moves".
+      env.DB.prepare(
+        `SELECT p.market_id AS marketId, p.item, p.price
+           FROM markets m
+          CROSS JOIN prices p ON p.market_id = m.id AND p.date = date(?1, '-1 day')
+          WHERE m.active = 1`,
+      ).bind(date),
+    ]);
+    rows = own.results as Row[];
+    before = prev.results as Row[];
+  }
+
+  // Trend lines end on the board's day, so they never run past the rates beside them.
   const trends = new Map<string, DayStat[]>();
   for (const r of daily.results as DayStat[]) {
+    if (!date || r.date > date) continue;
     if (!trends.has(r.item)) trends.set(r.item, []);
     trends.get(r.item)!.push(r);
   }
-  type Row = { marketId: number; item: string; price: number; market: string };
   const byItem = new Map<string, Row[]>();
-  for (const r of rows.results as Row[]) {
+  for (const r of rows) {
     if (!byItem.has(r.item)) byItem.set(r.item, []);
     byItem.get(r.item)!.push(r);
   }
@@ -225,18 +269,13 @@ async function buildOverview(env: ApiEnv) {
     const cheapest: string[] = list.filter((r) => r.price === stats.min).map((r) => r.market);
     return { item, ...labels(item), ...stats, cheapest, trend: usableDays(trends.get(item) ?? [], today).map((d) => d.median) };
   });
-  const changes = movers(rows.results as Row[], before.results as Row[], MIN_MOVER_BAZARS, Infinity);
-  // Listed vegetables no bazar has reported lately, so search can still offer their last price.
+  const changes = movers(rows, before, MIN_MOVER_BAZARS, Infinity);
+  // Listed vegetables not on the board's day, so search can still offer their last price.
   const seen = new Set(items.map((i) => i.item));
   const missing = Object.keys(ITEMS)
     .filter((item) => !seen.has(item))
     .map((item) => ({ item, ...labels(item) }));
-  const { markets, reportedToday, lastCheckedAt } = counts.results[0] as {
-    markets: number;
-    reportedToday: number;
-    lastCheckedAt: string | null;
-  };
-  return { today, markets, reportedToday, lastCheckedAt, items, changes, movers: changes.slice(0, 3), missing };
+  return { today, date, markets, reportedToday, lastCheckedAt, items, changes, movers: changes.slice(0, 3), missing };
 }
 
 const TREND_DAYS = 7;

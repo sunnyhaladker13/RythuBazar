@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ITEMS, baseItem, itemBySlug, itemSlug, pathForItem } from "../src/items";
 import { chartRanges, changeText, esc, html, vegetablePage, type VegData } from "../src/pages";
-import { istTime, slugify } from "../src/format";
+import { dayWord, istTime, slugify } from "../src/format";
 
 describe("vegetable slugs", () => {
   it("drops the bracket and is unique", () => {
@@ -32,6 +32,12 @@ describe("html", () => {
     expect(istTime("2026-10-19T06:35:00.000Z")).toBe("12:05 pm");
     expect(istTime("2026-10-19T02:00:00.000Z")).toBe("7:30 am");
     expect(slugify("Kothagudem (P. Stdm)")).toBe("kothagudem-p-stdm");
+  });
+
+  it("names the board's day from today's side", () => {
+    expect(dayWord("2026-10-19", "2026-10-19")).toBe("today");
+    expect(dayWord("2026-10-18", "2026-10-19")).toBe("yesterday");
+    expect(dayWord("2026-10-17", "2026-10-19")).toBe("Saturday");
   });
 });
 
@@ -86,12 +92,28 @@ describe("vegetable page", () => {
       data([row(1, "Erragadda", 23), row(2, "Kodad", 30, "2026-10-17", 16.99, 79.97)]),
     );
     expect(page).toContain("<title>Tomato price today in Hyderabad &amp; Telangana | Rythu Bazar rates</title>");
-    expect(page).toContain("19 Oct: Tomato is ₹23 a kg at 1 of 2 Rythu Bazars, including 1 branch in Hyderabad; up to ₹30 in Hyderabad.");
+    // Kodad's rate is from 17 Oct, so the dated sentences leave it out.
+    expect(page).toContain("19 Oct: Tomato is ₹23 a kg at Erragadda, the one Rythu Bazar that posted it.");
+    expect(page).toContain("₹23 a kg at Erragadda, the one Rythu Bazar that posted it today (Mon, 19 Oct).");
     expect(page).toContain('href="https://example.in/vegetables/tomato"');
     expect(page).toContain("₹23–30 at 2 branches · 1 posted today");
     expect(page).toContain("The typical rate is ₹23 a kg, the same as yesterday and ₹4 less than a week ago (₹27 on 12 Oct).");
     expect(page).toContain("2 days ago");
     expect(page).not.toContain("noindex");
+  });
+
+  it("answers from the latest day's rates only", () => {
+    const today = vegetablePage(
+      { origin: "" },
+      data([row(1, "Erragadda", 23), row(2, "Mehdipatnam", 23), row(3, "Siddipet", 35, "2026-10-19", 18.1, 78.85), row(4, "Kodad", 19, "2026-10-17")]),
+    );
+    expect(today).toContain("₹23 to ₹35 a kg at 3 Rythu Bazars today (Mon, 19 Oct). It&#39;s ₹23 at all 2 Hyderabad branches.");
+    expect(today).toContain("19 Oct: Tomato is ₹23 a kg at 2 of 3 Rythu Bazars");
+
+    const morning = vegetablePage({ origin: "" }, data([row(1, "Erragadda", 23, "2026-10-18"), row(2, "Kodad", 30, "2026-10-18", 16.99, 79.97)]));
+    expect(morning).toContain(
+      "No branch has posted a tomato rate today yet. ₹23 to ₹30 a kg at 2 Rythu Bazars on Sun, 18 Oct. It was ₹23 at Erragadda, the one Hyderabad branch among them.",
+    );
   });
 
   it("is noindex with nothing to show, and escapes branch names", () => {
