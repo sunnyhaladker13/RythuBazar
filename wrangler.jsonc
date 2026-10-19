@@ -5,9 +5,13 @@
   "compatibility_date": "2026-10-01",
   "observability": { "enabled": true },
 
-  // Static site; /api/* falls through to the Worker. "/" runs the Worker first so it
-  // can fill in the link-preview tags (src/share.ts).
-  "assets": { "directory": "./public", "binding": "ASSETS", "run_worker_first": ["/"] },
+  // public/ holds the static files (styles, script, share image). The Worker renders every page
+  // (src/site.ts) and answers /api/*; anything else that isn't a file gets its 404 page.
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": ["/", "/vegetables", "/vegetables/*", "/branches", "/branches/*", "/sitemap.xml", "/robots.txt"]
+  },
 
   // Per-IP limit on /api/* (src/index.ts). Approximate and per Cloudflare location. Generous
   // because Indian mobile carriers put many users behind one IP; it only stops runaway scripts.
@@ -38,7 +42,10 @@
     // Market already reported today: re-check for revisions this often.
     "RECHECK_INTERVAL_MIN": "180",
     // Re-read each district's market list (and empty districts) this often.
-    "DISCOVERY_INTERVAL_MIN": "1440"
+    "DISCOVERY_INTERVAL_MIN": "1440",
+    // The site's public address for canonical links and the sitemap, e.g. "https://rythubazarrates.in".
+    // Once set, pages asked for on any other host (workers.dev) 301 there. Empty: each request's own host.
+    "SITE_ORIGIN": ""
   }
   // Optional secret enabling POST /api/admin/scrape: `npx wrangler secret put ADMIN_TOKEN`
 }

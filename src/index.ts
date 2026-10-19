@@ -1,9 +1,9 @@
 import { handleApi } from "./api";
 import { runTick } from "./scraper/tick";
-import { defaultMeta, shareMeta, withShareTags } from "./share";
+import { handleSite, notFound, type SiteEnv } from "./site";
 
 export default {
-  async fetch(request, env): Promise<Response> {
+  async fetch(request, env: Env & SiteEnv): Promise<Response> {
     const url = new URL(request.url);
     if (url.pathname.startsWith("/api/")) {
       // Fail open: a limiter outage must not take the API down with it.
@@ -18,11 +18,11 @@ export default {
       }
       return handleApi(request, env, url);
     }
-    const page = await env.ASSETS.fetch(request);
-    if (url.pathname !== "/" || !page.headers.get("content-type")?.startsWith("text/html")) return page;
-    // A failed lookup must never break the page; fall back to the generic preview.
-    const meta = await shareMeta(env.DB, url).catch(() => defaultMeta(url));
-    return withShareTags(page, meta);
+    // Pages are rendered here (src/site.ts); everything else is a static file from public/.
+    const page = await handleSite(request, env, url);
+    if (page) return page;
+    const file = await env.ASSETS.fetch(request);
+    return file.status === 404 ? notFound({ origin: env.SITE_ORIGIN?.replace(/\/$/, "") || url.origin }, url.pathname) : file;
   },
 
   async scheduled(_controller, env, ctx): Promise<void> {
@@ -36,4 +36,4 @@ export default {
       ),
     );
   },
-} satisfies ExportedHandler<Env>;
+} satisfies ExportedHandler<Env & SiteEnv>;

@@ -119,14 +119,16 @@ svg {
 /* ---------- Header ---------- */
 
 .top {
-  background: var(--sun);
-  color: var(--on-sun);
+  --top-bg: var(--sun);
+  --top-fg: var(--on-sun);
+  background: var(--top-bg);
+  color: var(--top-fg);
   padding: max(16px, env(safe-area-inset-top)) 0 20px;
 }
 @media (prefers-color-scheme: dark) {
   .top {
-    background: #1d1a1b;
-    color: var(--sun);
+    --top-bg: #1d1a1b;
+    --top-fg: var(--sun);
   }
 }
 
@@ -407,7 +409,7 @@ svg {
 .prices.old {
   opacity: 0.75;
 }
-.prices li + li {
+.prices > li:not([hidden]) ~ li:not([hidden]) {
   border-top: 1px solid var(--line);
 }
 
@@ -598,44 +600,12 @@ svg {
   border-color: var(--warn);
 }
 
-.nearby {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 16px;
-}
-.nearby h3,
 .sheet-section {
   margin: 0;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.09em;
   text-transform: uppercase;
-}
-.nearby-btn {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  min-height: 64px;
-  padding: 12px 14px;
-  background: var(--surface);
-  border: 1px solid var(--edge);
-  text-align: left;
-}
-.nearby-btn .what .sub {
-  font-size: 13px;
-  color: var(--muted);
-}
-.pill {
-  flex: none;
-  padding: 6px 14px;
-  border: 1.5px solid var(--on-sun);
-  border-radius: 25px;
-  background: var(--sun);
-  color: var(--on-sun);
-  font-size: 14px;
-  font-weight: 700;
 }
 
 .foot {
@@ -682,10 +652,6 @@ svg {
 }
 .sheet::backdrop {
   background: var(--scrim);
-}
-#compare {
-  height: auto;
-  min-height: 60dvh;
 }
 
 @keyframes rise {
@@ -761,212 +727,10 @@ svg {
   padding-bottom: max(16px, env(safe-area-inset-bottom));
 }
 
-.cmp-summary {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 0 16px 14px;
-  border-bottom: 1px solid var(--line);
-}
-.cmp-summary p {
-  margin: 0;
-  font-size: 15px;
-  text-wrap: pretty;
-}
-.tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 600;
-}
-.tags span {
-  padding: 2px 10px;
-  border: 1px solid var(--ink);
-  border-radius: 10px;
-}
-.chart {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--line);
-}
-.chart-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 600;
-}
-.chart-tabs {
-  display: flex;
-  gap: 6px;
-}
-.chart-tabs .chip {
-  height: 32px;
-  padding: 0 12px;
-  font-size: 13px;
-}
-.chart svg {
-  display: block;
-  width: 100%;
-  height: auto;
-  overflow: visible;
-}
-/* The global svg rule strokes everything (it's for icons); the chart sets its own. */
-.chart svg {
-  stroke: none;
-}
-.chart text {
-  font-size: 11px;
-  fill: var(--muted);
-}
-.chart .grid {
-  stroke: var(--track);
-  stroke-width: 1;
-}
-.chart .band {
-  fill: var(--sun);
-  fill-opacity: 0.4;
-}
-.chart .line {
-  fill: none;
-  stroke: var(--ink);
-  stroke-width: 2;
-  stroke-linejoin: round;
-}
-.chart .end {
-  fill: var(--ink);
-}
-.chart-key {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
-  font-size: 12px;
-  color: var(--muted);
-}
-.chart-key span {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.chart-key i {
-  display: block;
-  width: 16px;
-}
-.chart-key .k-line {
-  height: 2px;
-  background: var(--ink);
-}
-.chart-key .k-band {
-  height: 10px;
-  background: var(--sun);
-  opacity: 0.55;
-}
-.chart-note {
-  margin: 0;
-  font-size: 13px;
-  color: var(--muted);
-}
-.tags span:first-child {
-  background: var(--board);
-  border-color: var(--board);
-  color: var(--board-text);
-}
-.tags .warn {
-  border-color: var(--warn);
-  color: var(--warn);
-}
-
-.cmp-list,
 .mk-list {
   list-style: none;
   margin: 0;
   padding: 0;
-}
-
-.cmp-row {
-  display: flex;
-  width: 100%;
-  border: 0;
-  background: none;
-  text-align: left;
-  align-items: center;
-  gap: 14px;
-  padding: 9px 16px;
-}
-button.cmp-row:hover {
-  background: var(--sun-soft);
-}
-.cmp-row .chev {
-  flex: none;
-  width: 16px;
-  height: 16px;
-  margin-left: -6px;
-  color: var(--muted);
-}
-.cmp-row.cheapest {
-  background: var(--sun-soft);
-}
-.cmp-row.here {
-  background: var(--sun);
-  color: var(--on-sun);
-}
-.cmp-row .where {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.cmp-row .name {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  font-size: 15px;
-  line-height: 1.2;
-}
-.cmp-row .name b {
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.cmp-row .name small {
-  font-size: 12px;
-  opacity: 0.75;
-  white-space: nowrap;
-}
-.bar {
-  position: relative;
-  height: 8px;
-  background: var(--track);
-}
-.bar span {
-  position: absolute;
-  inset: 0 auto 0 0;
-  background: var(--bar);
-}
-.cmp-row.here .bar {
-  background: rgba(35, 31, 32, 0.15);
-}
-.cmp-row.here .bar span {
-  background: var(--on-sun);
-}
-.cmp-row .val {
-  width: 72px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-}
-.cmp-row .val .num {
-  font-size: 24px;
-}
-.cmp-row .val small {
-  font-size: 11px;
-  font-weight: 600;
 }
 
 .sheet-section {
@@ -1031,11 +795,6 @@ button.cmp-row:hover {
     height: min(720px, calc(100dvh - 64px));
     margin: auto;
     border: 1.5px solid var(--ink);
-  }
-  #compare {
-    height: auto;
-    min-height: 0;
-    max-height: min(720px, calc(100dvh - 64px));
   }
   .sheet-grip {
     display: none;
@@ -1252,4 +1011,368 @@ button.cmp-row:hover {
 }
 .mk-btn[aria-current="true"] .tag.old {
   color: inherit;
+}
+
+/* ---------- Links that look like the rows and buttons they replaced ---------- */
+
+a.row,
+a.staple,
+a.mk-btn,
+a.near-go,
+a.back-btn,
+a.chip {
+  color: inherit;
+  text-decoration: none;
+}
+a.staple {
+  color: var(--board-text);
+}
+a.chip {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* ---------- Sections under a list ---------- */
+
+.section-label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+.more {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+.note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+  text-wrap: pretty;
+}
+.what .sub {
+  font-size: 14px;
+  line-height: 1.25;
+  color: var(--muted);
+}
+.near-row {
+  min-height: 60px;
+  padding: 8px 12px;
+}
+.near-row .tag {
+  flex: none;
+}
+.chip-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.about p {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: var(--muted);
+  text-wrap: pretty;
+}
+.foot-nav a {
+  color: inherit;
+  text-underline-offset: 2px;
+}
+@media (prefers-color-scheme: light) {
+  .note,
+  .about p,
+  .faq p {
+    color: #3a3d40;
+  }
+}
+
+/* ---------- One branch: Directions beside the name ---------- */
+
+.title-row {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.title-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dir-btn {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--ink);
+}
+.dir-btn svg {
+  width: 26px;
+  height: 26px;
+  stroke-width: 2;
+}
+
+/* ---------- One vegetable ---------- */
+
+.veg-top {
+  gap: 12px;
+}
+.top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.top-row .back-btn {
+  margin-bottom: 0;
+}
+.veg-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+.veg-name {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.veg-name .market-name {
+  font-size: clamp(32px, 11vw, 44px);
+}
+.veg-name .te {
+  font-size: 17px;
+  line-height: 1.35;
+}
+.veg-price {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+.veg-when {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+.veg-num {
+  font-size: 44px;
+  line-height: 0.95;
+}
+.veg-num .unit {
+  font-size: 13px;
+  font-weight: 600;
+  font-stretch: 100%;
+}
+.veg-price .chg {
+  font-size: 13px;
+  font-weight: 700;
+}
+.veg-note,
+.chart-note {
+  margin: 0;
+  font-size: 13px;
+}
+.veg-note {
+  max-width: 14em;
+  text-align: right;
+}
+
+/* The price chart: the server draws one per period; app.js shows one and reads days off it. */
+.trend-wrap {
+  touch-action: pan-y;
+}
+.trend {
+  position: relative;
+  height: 104px;
+}
+.trend[hidden],
+.trend-cursor[hidden] {
+  display: none;
+}
+.trend svg {
+  display: block;
+  width: 100%;
+  height: 96px;
+  overflow: visible;
+  stroke: none;
+}
+.trend-base {
+  stroke: currentColor;
+  stroke-opacity: 0.45;
+  stroke-width: 1;
+  stroke-dasharray: 2 4;
+}
+.trend-line {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.trend-dot {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 2px var(--top-bg);
+  pointer-events: none;
+}
+.trend-cursor {
+  position: absolute;
+  top: 0;
+  width: 1px;
+  height: 96px;
+  margin-left: -0.5px;
+  background: currentColor;
+  pointer-events: none;
+}
+.trend-label {
+  position: absolute;
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.trend-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ranges {
+  display: flex;
+  gap: 6px;
+}
+.range-chip {
+  flex: none;
+  height: 32px;
+  min-width: 44px;
+  padding: 0 10px;
+  border: 1.5px solid var(--top-fg);
+  border-radius: 25px;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 700;
+}
+.range-chip[aria-pressed="true"] {
+  background: var(--top-fg);
+  color: var(--top-bg);
+}
+
+/* Each branch's rate */
+.br-row {
+  min-height: 72px;
+}
+.br-row .cost {
+  width: auto;
+  gap: 4px;
+}
+.br-row .when {
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.br-row .when.fresh-when {
+  color: inherit;
+}
+.chip-near {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.chip-near[hidden] {
+  display: none;
+}
+.chip-near .pin {
+  width: 14px;
+  height: 14px;
+}
+.near-msg {
+  margin: 0;
+  font-size: 13px;
+  color: var(--warn);
+}
+.near-msg[hidden] {
+  display: none;
+}
+
+.faq {
+  padding: 0;
+}
+.faq > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 12px;
+}
+.faq > div + div {
+  border-top: 1px solid var(--line);
+}
+.faq h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+.faq p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
+  text-wrap: pretty;
+}
+
+.veg-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+@media (min-width: 560px) {
+  .veg-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+.veg-grid a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  min-height: 56px;
+  padding: 8px;
+  background: var(--surface);
+  border: 1px solid var(--edge);
+  color: inherit;
+  text-decoration: none;
+}
+.veg-grid a:hover {
+  background: var(--sun-soft);
+}
+.veg-grid .en {
+  font-size: 14px;
+}
+.veg-grid .te {
+  font-size: 13px;
+}
+.veg-grid .num {
+  flex: none;
+  font-size: 17px;
 }

@@ -1,5 +1,6 @@
 import { istDate, runTick, type ScrapeEnv } from "./scraper/tick";
 import { ITEMS, describe } from "./items";
+import { withSlugs } from "./branches";
 import { snapshot } from "./snapshot";
 
 /** An item's display labels, for the page (no `known`: that's for /api/status). */
@@ -22,9 +23,11 @@ const respond = (body: string, status = 200, maxAge = 120) =>
   });
 const json = (data: unknown, status = 200, maxAge = 120) => respond(JSON.stringify(data), status, maxAge);
 
-// The two endpoints every home page view calls are served from snapshots (src/snapshot.ts).
-const overviewBody = (env: ApiEnv) => snapshot(env.DB, "overview", () => buildOverview(env));
-const marketsBody = (env: ApiEnv) => snapshot(env.DB, "markets", () => buildMarkets(env));
+// What the pages (src/site.ts) and the busiest endpoints show is served from snapshots (src/snapshot.ts).
+export const overviewBody = (env: ApiEnv) => snapshot(env.DB, "overview", () => buildOverview(env));
+export const marketsBody = (env: ApiEnv) => snapshot(env.DB, "markets", () => buildMarkets(env));
+/** One branch's latest table; check the id exists first (marketsBody) so junk ids don't fill the table. */
+export const pricesBody = (env: ApiEnv, id: number) => snapshot(env.DB, `prices:${id}`, () => buildPrices(env, id));
 
 export async function handleApi(req: Request, env: ApiEnv, url: URL): Promise<Response> {
   const path = url.pathname;
@@ -38,6 +41,13 @@ export async function handleApi(req: Request, env: ApiEnv, url: URL): Promise<Re
   if (req.method === "POST" && path === "/api/admin/scrape") return manualScrape(req, env);
   return json({ error: "not found" }, 404, 0);
 }
+
+export type Markets = Awaited<ReturnType<typeof buildMarkets>>;
+export type Market = Markets["districts"][number]["markets"][number] & { district: string; districtId: number };
+
+/** Every branch with its district, in district then name order. */
+export const flatMarkets = (data: Markets): Market[] =>
+  data.districts.flatMap((d) => d.markets.map((m) => ({ ...m, district: d.name, districtId: d.id })));
 
 async function buildMarkets(env: ApiEnv) {
   const { results } = await env.DB.prepare(
@@ -58,8 +68,9 @@ async function buildMarkets(env: ApiEnv) {
     lat: number | null;
     lng: number | null;
   }>();
-  const districts = new Map<number, { id: number; name: string; markets: unknown[] }>();
-  for (const { districtId, district, ...m } of results) {
+  type Row = Omit<(typeof results)[number], "districtId" | "district"> & { slug: string };
+  const districts = new Map<number, { id: number; name: string; markets: Row[] }>();
+  for (const { districtId, district, ...m } of withSlugs(results)) {
     if (!districts.has(districtId)) districts.set(districtId, { id: districtId, name: district, markets: [] });
     districts.get(districtId)!.markets.push(m);
   }
@@ -69,7 +80,15 @@ async function buildMarkets(env: ApiEnv) {
 async function prices(env: ApiEnv, url: URL) {
   const marketId = Number(url.searchParams.get("market"));
   if (!Number.isInteger(marketId) || marketId <= 0) return json({ error: "market is required" }, 400, 0);
+  const known = flatMarkets(JSON.parse(await marketsBody(env)) as Markets).some((m) => m.id === marketId);
+  if (!known) return json({ error: "unknown market" }, 404, 0);
+  return respond(await pricesBody(env, marketId));
+}
 
+export type Prices = NonNullable<Awaited<ReturnType<typeof buildPrices>>>;
+
+/** One branch's latest table, each item against its spread across branches, and its biggest moves. */
+async function buildPrices(env: ApiEnv, marketId: number) {
   const market = await env.DB.prepare(
     `SELECT m.id, m.name, d.name AS district, m.last_checked_at AS lastCheckedAt,
             (SELECT MAX(date) FROM prices p WHERE p.market_id = m.id) AS latestDate
@@ -77,17 +96,20 @@ async function prices(env: ApiEnv, url: URL) {
   )
     .bind(marketId)
     .first<{ id: number; name: string; district: string; lastCheckedAt: string | null; latestDate: string | null }>();
-  if (!market) return json({ error: "unknown market" }, 404, 0);
+  if (!market) return null;
 
   const today = istDate(new Date());
   if (!market.latestDate) {
-    return json({
+    return {
       market: { id: market.id, name: market.name, district: market.district, lastCheckedAt: market.lastCheckedAt },
       date: null,
       isToday: false,
       today,
+      updatedAt: null,
       items: [],
-    });
+      changes: [],
+      movers: [],
+    };
   }
 
   const [own, before, recent, overviewJson] = await Promise.all([
@@ -108,7 +130,7 @@ async function prices(env: ApiEnv, url: URL) {
     // Each item's spread across bazars is exactly what the overview already computes.
     overviewBody(env),
   ]);
-  const stats = new Map(
+  const stats = new Map<string, { min: number; max: number; median: number; markets: number }>(
     (JSON.parse(overviewJson) as Overview).items.map(({ item, min, max, median, markets }) => [
       item,
       { min, max, median, markets },
@@ -131,15 +153,17 @@ async function prices(env: ApiEnv, url: URL) {
     1,
     Infinity,
   );
-  return json({
+  return {
     market: { id: market.id, name: market.name, district: market.district, lastCheckedAt: market.lastCheckedAt },
-    date: market.latestDate,
+    date: market.latestDate as string | null,
     isToday: market.latestDate === today,
     today,
+    // When this table's rates last appeared or changed.
+    updatedAt: own.results.reduce<string | null>((t, r) => (!t || r.updatedAt > t ? r.updatedAt : t), null),
     items,
     changes,
     movers: changes.slice(0, 3),
-  });
+  };
 }
 
 /**
@@ -147,13 +171,13 @@ async function prices(env: ApiEnv, url: URL) {
  * Read from markets.last_reported_date (kept by the scraper) rather than MAX(date) over
  * prices: that would scan all of history on every page view and burn D1's free read quota.
  */
-const LATEST = `WITH latest AS (
+export const LATEST = `WITH latest AS (
   SELECT id AS market_id, last_reported_date AS date
     FROM markets
    WHERE active = 1 AND last_reported_date >= ?1)`;
-const windowStart = () => istDate(new Date(Date.now() - 3 * 86_400_000));
+export const windowStart = () => istDate(new Date(Date.now() - 3 * 86_400_000));
 
-type Overview = Awaited<ReturnType<typeof buildOverview>>;
+export type Overview = Awaited<ReturnType<typeof buildOverview>>;
 
 /** All bazars at once: each item's price range, median and where it's cheapest. */
 async function buildOverview(env: ApiEnv) {
@@ -198,7 +222,7 @@ async function buildOverview(env: ApiEnv) {
   }
   const items = [...byItem].map(([item, list]) => {
     const stats = priceStats(list.map((r) => r.price).join(","));
-    const cheapest = list.filter((r) => r.price === stats.min).map((r) => r.market);
+    const cheapest: string[] = list.filter((r) => r.price === stats.min).map((r) => r.market);
     return { item, ...labels(item), ...stats, cheapest, trend: usableDays(trends.get(item) ?? [], today).map((d) => d.median) };
   });
   const changes = movers(rows.results as Row[], before.results as Row[], MIN_MOVER_BAZARS, Infinity);
@@ -207,13 +231,18 @@ async function buildOverview(env: ApiEnv) {
   const missing = Object.keys(ITEMS)
     .filter((item) => !seen.has(item))
     .map((item) => ({ item, ...labels(item) }));
-  return { today, ...(counts.results[0] as object), items, changes, movers: changes.slice(0, 3), missing };
+  const { markets, reportedToday, lastCheckedAt } = counts.results[0] as {
+    markets: number;
+    reportedToday: number;
+    lastCheckedAt: string | null;
+  };
+  return { today, markets, reportedToday, lastCheckedAt, items, changes, movers: changes.slice(0, 3), missing };
 }
 
 const TREND_DAYS = 7;
 const daysAgo = (n: number) => istDate(new Date(Date.now() - n * 86_400_000));
 
-type DayStat = { item: string; date: string; median: number; min?: number; max?: number; markets: number };
+export type DayStat = { item: string; date: string; median: number; min?: number; max?: number; markets: number };
 
 /**
  * Days whose typical price means something: at least 3 bazars. Today is still filling in

@@ -17,12 +17,12 @@ rbzts (ASP.NET page, no API)
 D1: districts → markets → prices (one row per market / day / item, history kept)
    │  JSON API (src/api.ts)
    ▼
-Static site (public/): all-bazar overview by default, one bazar via ?market=<id>
+Pages rendered by the Worker (src/site.ts, src/pages.ts) + public/app.js on top
 ```
 
 1. **Scrape.** The cron Worker posts the rbzts dropdowns (district → market) and parses each market's price table. Prices fill in through the morning, so markets are re-checked until they report. Bazars post between ~07:30 and the 1 PM deadline (8 Oct: Yellandu by 07:30, Kukatpally 09:50, most later). rbzts shows no date, so a table identical to a bazar's previous day is treated as yesterday's still on screen, not today's (`isCarryOver`).
 2. **Store.** Each market's table is saved per IST date. A row is written only when a price changes, and history is never pruned. Price history starts 7 Oct 2026; rbzts has no older data.
-3. **Serve.** The home page shows every item across all bazars: its price range (lowest–highest) and where it's cheapest. Picking a bazar ("Choose a branch") shows that bazar's own table.
+3. **Serve.** Every page is rendered by the Worker with its rates in the HTML, so search engines and AI tools that don't run JavaScript see them (see Pages below). The home page shows every item across all bazars: its price range (lowest–highest) and where it's cheapest. Each branch and each vegetable has its own page.
 4. **Near me.** A visitor can share their location to sort branches by distance and open their nearest branch (see below).
 5. **Share.** Links get a preview card on WhatsApp and social media, and bazar links are titled after their bazar (see below).
 
@@ -30,12 +30,15 @@ Static site (public/): all-bazar overview by default, one bazar via ?market=<id>
 
 | Path | What |
 |---|---|
-| `src/index.ts` | Worker entry: routes `/api/*`, adds share tags to `/`, runs the cron |
+| `src/index.ts` | Worker entry: `/api/*`, pages, static files, the cron |
 | `src/scraper/` | `rbzts.ts` (fetch and parse), `plan.ts` (what's due this tick), `tick.ts` (one run) |
 | `src/api.ts` | JSON endpoints (below) |
-| `src/share.ts` | Open Graph tags per request |
-| `src/snapshot.ts` | Saved responses for `/api/overview` and `/api/markets` (below) |
-| `public/` | The site: `index.html`, `app.js`, `styles.css`, `og.jpg` |
+| `src/site.ts` | Page routes, the data behind each page, sitemap, robots.txt, redirects |
+| `src/pages.ts` | Page HTML (escaped template strings), titles, descriptions, FAQ answers |
+| `src/branches.ts` | Branch names, labels and URL slugs |
+| `src/format.ts` | Dates, times, ₹ amounts, slugs, distances |
+| `src/snapshot.ts` | Saved data for the pages and busiest endpoints (below) |
+| `public/` | `app.js` (search, sort, near me, chart readout), `styles.css`, `og.jpg` |
 | `design/` | Share-card source (`og-card.html`) and its renderer |
 | `migrations/` | D1 schema |
 | `research/` | The original Python scraper prototype |
@@ -92,7 +95,7 @@ npm test && npm run typecheck
 
 `/api/*` is rate limited per IP at 300 requests/min (Workers rate-limit binding `API_LIMITER`; approximate and per Cloudflare location). Over the limit gets `429`. It is generous on purpose, because Indian mobile carriers share one IP across many users. Requests it blocks still count toward the Worker's 100k/day; only a firewall rule in front (needs a custom domain) avoids that.
 
-**Snapshots** (`src/snapshot.ts`, table `snapshots`): `/api/overview` (~920 rows to build) and `/api/markets` (~120) are saved as ready-made JSON, so a request reads 1 row. `/api/prices` takes each item's cross-bazar spread from the overview snapshot (~30 rows instead of ~815). A snapshot is rebuilt on the next request after any of these:
+**Snapshots** (`src/snapshot.ts`, table `snapshots`): `overview` (~920 rows to build), `markets` (~120), `prices:<id>` per branch (~230) and `item:<key>` per vegetable (~40 + 1 per day of history) are saved as ready-made JSON, so a request reads 1 row each. `/api/prices` takes each item's cross-bazar spread from the overview snapshot (~30 rows instead of ~815). A snapshot is rebuilt on the next request after any of these:
 - the scraper writes anything (`tick.ts` deletes all snapshots in the same batch);
 - the IST date changes;
 - 5 minutes pass (a backstop).
@@ -107,6 +110,23 @@ It's safe to empty the table at any time.
 | `GET /api/item?name=<item>` | One item across markets (each market's latest date within 3 days), cheapest first |
 | `GET /api/status` | Coverage today, the last 20 scrape runs, `unknownItems` and `unlocatedMarkets` |
 
+## Pages
+
+| URL | What |
+|---|---|
+| `/` | All branches: each item's range, biggest moves, search, branch picker |
+| `/vegetables/<slug>` | One vegetable: typical price + chart (1W/1M, 3M/1Y once there's history), every branch's rate, 3 answers built from the numbers. Slug = English name minus any bracket (`okra`, `onion`); varieties ("Tomato-618") show as a line on their base page |
+| `/branches/<slug>` | One branch: its table, nearby branches, others in its district. Slug from its name (`kukatpally`, `adilabad-municipal-office`, see `branchSlug`) |
+| `/vegetables`, `/branches` | Hubs listing every vegetable / branch |
+| `/?market=<id>` | 301 to the branch page, so old shared links work |
+| `/sitemap.xml`, `/robots.txt` | Pages with rates; `/api/` disallowed |
+
+- `<title>` never has a price (search results keep titles for days); the meta description is dated with the day's price.
+- Branches that have never posted, and vegetables nobody posted in 3 days, are `noindex` and left out of the sitemap.
+- A page view reads 1–2 D1 rows: `overview` + `markets` (home), `markets` + `prices:<id>` (branch), `item:<key>` (vegetable). All rebuild as described under snapshots.
+- "Updated" = when the rates last appeared or changed (`prices.updated_at`). The server writes the IST time; `app.js` turns it into "40 mins ago".
+- Domain: `SITE_ORIGIN` in `wrangler.jsonc`. Empty = each request's own host. Once the real domain is set there, canonical links and the sitemap use it, and pages asked for on workers.dev 301 to it. Submit the sitemap to Search Console / Bing only after that.
+
 ## Near me
 
 - Each branch's coordinates are in `markets.lat`/`lng` (filled by `migrations/0004_market_geo.sql`; sources and confidence are in its comments). `/api/markets` sends them with the list.
@@ -117,7 +137,7 @@ It's safe to empty the table at any time.
 
 ## Link previews (WhatsApp, social)
 
-- `public/index.html` carries Open Graph tags. Because `run_worker_first: ["/"]` is set in `wrangler.jsonc`, the Worker handles `/` before the static file is served. `src/share.ts` then fills in absolute URLs for whatever domain serves the page, and titles `?market=` links after their bazar. A `?market=` link costs one 2-row D1 lookup.
+- Every page carries Open Graph tags with its own title and description (`layout` in `src/pages.ts`) and the same card image.
 - Untidy rbzts names get a place first: "Opp: Municipal Office" in Adilabad becomes "Adilabad Rythu Bazar (Opp: Municipal Office)". See `bazarLabel`.
 - The card is `public/og.jpg`, 1200×630. Keep it under ~300 KB, or WhatsApp may show a small preview or none. WhatsApp shows it at about a third of its size, so keep text large. To change it:
 
@@ -127,7 +147,7 @@ It's safe to empty the table at any time.
   sips -s format jpeg -s formatOptions 85 public/og.png --out public/og.jpg && rm public/og.png
   ```
 
-  Then bump `?v=` in `OG_IMAGE` (`src/share.ts`) and `public/index.html`. WhatsApp caches previews per image URL.
+  Then bump `?v=` in `OG_IMAGE` (`src/pages.ts`). WhatsApp caches previews per image URL.
 
 ## Things to watch after the first deploy
 

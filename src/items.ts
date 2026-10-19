@@ -1,5 +1,8 @@
 // rbzts item names → English label, Telugu name, tile colour. The API attaches these to every
-// item it returns (describe), so this file is the one place to add a new vegetable.
+// item it returns (describe), and each listed item gets a page at /vegetables/<slug>, so this file
+// is the one place to add a new vegetable.
+
+import { slugify } from "./format";
 
 export type ItemInfo = { en: string; te: string; color: string; known: boolean };
 
@@ -38,13 +41,37 @@ const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 // A variety or grade written as base + hyphen + suffix: "Tomato-618", "Onions-II".
 const VARIANT = /^(.*?[A-Za-z)])\s*-\s*([A-Za-z0-9]+)$/;
 
-const exact = new Map(Object.entries(ITEMS).map(([k, v]) => [norm(k), v]));
+const exact = new Map(Object.keys(ITEMS).map((k) => [norm(k), k]));
 // Base names of listed items, so "Onions-II" finds "Onions-I" through "Onions".
-const bases = new Map<string, [string, string, string]>();
-for (const [k, v] of Object.entries(ITEMS)) {
+const bases = new Map<string, string>();
+for (const k of Object.keys(ITEMS)) {
   const b = norm(k.match(VARIANT)?.[1] ?? k);
-  if (!bases.has(b)) bases.set(b, v);
+  if (!bases.has(b)) bases.set(b, k);
 }
+
+/** The listed item a name is, or is a variety of ("Tomato-618" → "Tomato"); null if unlisted. */
+export function baseItem(name: string): string | null {
+  const hit = exact.get(norm(name));
+  if (hit) return hit;
+  const v = name.match(VARIANT);
+  return (v && bases.get(norm(v[1]))) || null;
+}
+
+/** A listed item's page slug, from its English name minus any bracket: "Okra (bhindi)" → "okra". */
+export const itemSlug = (key: string) => slugify(ITEMS[key][0].replace(/\s*\(.*\)$/, ""));
+const bySlug = new Map(Object.keys(ITEMS).map((k) => [itemSlug(k), k]));
+export const itemBySlug = (slug: string) => bySlug.get(slug) ?? null;
+/** The page an item name links to (a variety links to its base item's page), or null. */
+export const pathForItem = (name: string) => {
+  const key = baseItem(name);
+  return key ? `/vegetables/${itemSlug(key)}` : null;
+};
+
+// Sold per piece or bunch at some bazars and per kg at others; the source doesn't say which.
+export const UNIT_VARIES = new Set(["Mulagakada", "Leafy Vegetables"]);
+// Fewer bazars than this and an item isn't really "across bazars": the all-branches list leaves
+// it out, but search still finds it.
+export const RARE = 3;
 
 /**
  * Labels for an item name as rbzts writes it. Known = listed above, or a listed item plus a
@@ -52,10 +79,9 @@ for (const [k, v] of Object.entries(ITEMS)) {
  * else comes back as its raw name and known: false, and /api/status lists it.
  */
 export function describe(name: string): ItemInfo {
-  const hit = exact.get(norm(name));
-  if (hit) return { en: hit[0], te: hit[1], color: hit[2], known: true };
-  const v = name.match(VARIANT);
-  const base = v && bases.get(norm(v[1]));
-  if (v && base) return { en: `${base[0]} (${v[2]})`, te: base[1], color: base[2], known: true };
-  return { en: name, te: "", color: UNKNOWN_COLOR, known: false };
+  const key = baseItem(name);
+  if (!key) return { en: name, te: "", color: UNKNOWN_COLOR, known: false };
+  const [en, te, color] = ITEMS[key];
+  if (norm(key) === norm(name)) return { en, te, color, known: true };
+  return { en: `${en} (${name.match(VARIANT)![2]})`, te, color, known: true };
 }
