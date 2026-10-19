@@ -652,6 +652,15 @@ svg {
   margin: 0 0 8px;
   text-wrap: pretty;
 }
+.foot .credit {
+  margin-top: 20px;
+  padding-top: 12px;
+  border-top: 1px solid var(--edge);
+}
+.foot .credit a {
+  color: inherit;
+  text-underline-offset: 2px;
+}
 
 /* ---------- Sheets (bottom sheet on phones, panel on wider screens) ---------- */
 
