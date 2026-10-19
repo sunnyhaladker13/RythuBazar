@@ -23,7 +23,8 @@ Static site (public/): all-bazar overview by default, one bazar via ?market=<id>
 1. **Scrape.** The cron Worker posts the rbzts dropdowns (district → market) and parses each market's price table. Prices fill in through the morning, so markets are re-checked until they report. Bazars post between ~07:30 and the 1 PM deadline (8 Oct: Yellandu by 07:30, Kukatpally 09:50, most later). rbzts shows no date, so a table identical to a bazar's previous day is treated as yesterday's still on screen, not today's (`isCarryOver`).
 2. **Store.** Each market's table is saved per IST date. A row is written only when a price changes, and history is never pruned. Price history starts 7 Oct 2026; rbzts has no older data.
 3. **Serve.** The home page shows every item across all bazars: its price range (lowest–highest) and where it's cheapest. Picking a bazar ("Choose a branch") shows that bazar's own table.
-4. **Share.** Links get a preview card on WhatsApp and social media, and bazar links are titled after their bazar (see below).
+4. **Near me.** A visitor can share their location to sort branches by distance and open their nearest branch (see below).
+5. **Share.** Links get a preview card on WhatsApp and social media, and bazar links are titled after their bazar (see below).
 
 ## Project layout
 
@@ -100,11 +101,19 @@ It's safe to empty the table at any time.
 
 | Endpoint | Returns |
 |---|---|
-| `GET /api/markets` | Districts → markets, with `lastReportedDate` |
+| `GET /api/markets` | Districts → markets, with `lastReportedDate` and `lat`/`lng` |
 | `GET /api/overview` | All markets at once: each item's min / max / median across markets' latest tables, and where it's cheapest (the home page) |
 | `GET /api/prices?market=<id>` | The market's latest price table, plus `isToday` and each item's cross-market `stats` |
 | `GET /api/item?name=<item>` | One item across markets (each market's latest date within 3 days), cheapest first |
-| `GET /api/status` | Coverage today and the last 20 scrape runs |
+| `GET /api/status` | Coverage today, the last 20 scrape runs, `unknownItems` and `unlocatedMarkets` |
+
+## Near me
+
+- Each branch's coordinates are in `markets.lat`/`lng` (filled by `migrations/0004_market_geo.sql`; sources and confidence are in its comments). `/api/markets` sends them with the list.
+- The browser asks for the visitor's location only when they tap "Use my location", computes straight-line distances itself, and never sends the location anywhere. Distances are shown as approximate; each branch page has a Directions link to Google Maps for the road route.
+- Stored on the phone (`localStorage`): `rbz.near` (near me is on, so later visits open on the nearest branch, without a prompt) and `rbz.nearSkip` (when the home invite was dismissed; hidden for 30 days).
+- A new branch from rbzts has no coordinates: it shows in `/api/status` as `unlocatedMarkets` and sorts last. Fix it with
+  `npx wrangler d1 execute rythu-bazar --remote --command "UPDATE markets SET lat = …, lng = … WHERE id = …"` (and add the same line to a new migration so local databases match).
 
 ## Link previews (WhatsApp, social)
 

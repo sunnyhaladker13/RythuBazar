@@ -43,7 +43,7 @@ async function buildMarkets(env: ApiEnv) {
   const { results } = await env.DB.prepare(
     `SELECT d.id AS districtId, d.name AS district, m.id, m.name,
             m.last_reported_date AS lastReportedDate, m.last_item_count AS itemCount,
-            m.last_checked_at AS lastCheckedAt
+            m.last_checked_at AS lastCheckedAt, m.lat, m.lng
        FROM markets m JOIN districts d ON d.id = m.district_id
       WHERE m.active = 1
       ORDER BY d.name, m.name`,
@@ -55,6 +55,8 @@ async function buildMarkets(env: ApiEnv) {
     lastReportedDate: string | null;
     itemCount: number;
     lastCheckedAt: string | null;
+    lat: number | null;
+    lng: number | null;
   }>();
   const districts = new Map<number, { id: number; name: string; markets: unknown[] }>();
   for (const { districtId, district, ...m } of results) {
@@ -320,7 +322,7 @@ async function item(env: ApiEnv, url: URL) {
 }
 
 async function status(env: ApiEnv) {
-  const [runs, counts, items] = await env.DB.batch([
+  const [runs, counts, items, markets] = await env.DB.batch([
     env.DB.prepare("SELECT * FROM scrape_runs ORDER BY id DESC LIMIT 20"),
     env.DB.prepare(
       `SELECT (SELECT COUNT(*) FROM markets WHERE active = 1) AS markets,
@@ -330,10 +332,12 @@ async function status(env: ApiEnv) {
       `SELECT item, MIN(date) AS firstSeen, MAX(date) AS lastSeen, MAX(markets) AS bazars
          FROM daily_stats WHERE date >= ?1 GROUP BY item`,
     ).bind(daysAgo(29)),
+    env.DB.prepare("SELECT id, name FROM markets WHERE active = 1 AND lat IS NULL"),
   ]);
   // Names seen in the last 30 days that src/items.ts can't label: add them there.
   const unknownItems = (items.results as { item: string }[]).filter((r) => !describe(r.item).known);
-  return json({ ...(counts.results[0] as object), unknownItems, runs: runs.results }, 200, 0);
+  // Branches "near me" can't place: set markets.lat/lng (migrations/0004_market_geo.sql).
+  return json({ ...(counts.results[0] as object), unknownItems, unlocatedMarkets: markets.results, runs: runs.results }, 200, 0);
 }
 
 async function manualScrape(req: Request, env: ApiEnv) {

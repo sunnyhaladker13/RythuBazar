@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { movers, priceStats, usableDays } from "../src/api";
 import { describe as label } from "../src/items";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 describe("priceStats", () => {
   it("handles one market", () => {
@@ -80,5 +82,29 @@ describe("item labels", () => {
   it("flags anything else as unknown, under its raw name", () => {
     expect(label("Dragon Fruit")).toEqual({ en: "Dragon Fruit", te: "", color: "#a6a8aa", known: false });
     expect(label("Mystery-2")).toMatchObject({ en: "Mystery-2", known: false });
+  });
+});
+
+describe("branch locations (migrations/0004_market_geo.sql)", () => {
+  const sql = readFileSync(join(import.meta.dirname, "..", "migrations", "0004_market_geo.sql"), "utf8");
+  const rows = [...sql.matchAll(/lat = ([\d.]+), lng = ([\d.]+) WHERE id = (\d+);/g)].map((m) => ({
+    lat: Number(m[1]),
+    lng: Number(m[2]),
+    id: Number(m[3]),
+  }));
+
+  it("places every branch once", () => {
+    expect(rows.length).toBe(40);
+    expect(new Set(rows.map((r) => r.id)).size).toBe(rows.length);
+    expect(new Set(rows.map((r) => `${r.lat},${r.lng}`)).size).toBe(rows.length);
+  });
+
+  it("puts every branch inside Telangana, as lat then lng", () => {
+    for (const { lat, lng } of rows) {
+      expect(lat).toBeGreaterThan(15.8);
+      expect(lat).toBeLessThan(19.95);
+      expect(lng).toBeGreaterThan(77.2);
+      expect(lng).toBeLessThan(81.35);
+    }
   });
 });

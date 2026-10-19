@@ -1035,3 +1035,212 @@ button.cmp-row:hover {
     padding-top: 16px;
   }
 }
+
+/* ---------- Near me ---------- */
+
+.pin {
+  flex: none;
+  width: 18px;
+  height: 18px;
+}
+
+/* Home: one row under the header, an invite or a link to the nearest branch. */
+.near-ask {
+  background: var(--surface);
+  border-bottom: 1px solid var(--edge);
+}
+.near-ask[hidden] {
+  display: none;
+}
+.near-ask-inner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  padding-right: 4px;
+}
+.near-ask .what {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  font-size: 15px;
+  line-height: 1.2;
+}
+.btn-sun {
+  flex: none;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1.5px solid var(--on-sun);
+  border-radius: 25px;
+  background: var(--sun);
+  color: var(--on-sun);
+  font-size: 14px;
+  font-weight: 700;
+}
+.btn-sun:disabled {
+  opacity: 0.7;
+}
+.icon-btn.bare {
+  border-color: transparent;
+  color: var(--muted);
+}
+.near-go {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 56px;
+  padding: 6px 0;
+  border: 0;
+  background: none;
+  text-align: left;
+}
+.near-go .what {
+  display: flex;
+  flex-direction: column;
+}
+.near-go small {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.near-go .chev {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  color: var(--muted);
+}
+
+/* One branch: distance above the name, Directions under it. */
+.near-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+.near-line .pin {
+  width: 12px;
+  height: 12px;
+  fill: currentColor;
+}
+.near-line[hidden],
+.directions[hidden] {
+  display: none;
+}
+.directions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  margin-top: 6px;
+  padding: 0 14px;
+  border: 1.5px solid currentColor;
+  border-radius: 25px;
+  color: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.directions svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Branch list: "Use my location", then the sort toggle and distances. */
+.sheet-near {
+  padding: 0 16px 10px;
+}
+.sheet-near[hidden] {
+  display: none;
+}
+.near-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 60px;
+  padding: 10px 14px;
+  border: 1.5px solid var(--on-sun);
+  background: var(--sun);
+  color: var(--on-sun);
+  text-align: left;
+}
+.near-btn .what {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.near-btn small {
+  font-size: 13px;
+}
+.near-sort {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.near-sort > span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.near-sort .pin {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+.near-sort small {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.link-btn {
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.mk-btn .dist {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+.mk-btn .dist .num {
+  font-size: 19px;
+}
+.tag {
+  padding: 1px 6px;
+  border: 1px solid transparent;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.tag.today {
+  background: var(--sun);
+  color: var(--on-sun);
+  border-color: var(--on-sun);
+}
+.tag.recent {
+  background: var(--track);
+}
+.tag.old {
+  border-color: var(--edge);
+  color: var(--muted);
+}
+.mk-btn[aria-current="true"] .tag.old {
+  color: inherit;
+}

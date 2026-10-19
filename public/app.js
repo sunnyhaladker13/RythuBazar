@@ -7,6 +7,9 @@ const els = {
   today: $("today"),
   back: $("back"),
   title: $("title"),
+  nearLine: $("near-line"),
+  directions: $("directions"),
+  nearAsk: $("near-ask"),
   sub: $("sub"),
   fresh: $("fresh"),
   board: $("board"),
@@ -24,6 +27,7 @@ const els = {
   cmpTe: $("cmp-te"),
   cmpBody: $("cmp-body"),
   markets: $("markets"),
+  mkNear: $("mk-near"),
   mkSearch: $("mk-search"),
   mkBody: $("mk-body"),
 };
@@ -66,6 +70,11 @@ const store = {
       localStorage.setItem(k, v);
     } catch {}
   },
+  remove(k) {
+    try {
+      localStorage.removeItem(k);
+    } catch {}
+  },
 };
 
 const dateFmt = new Intl.DateTimeFormat("en-IN", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
@@ -101,6 +110,8 @@ const state = {
   market: null, // null = all bazars; else the /api/prices market
   current: null, // { date, isToday, items } with items as { item, price, stats, cheapest? }
   sort: store.get("rbz.sort") ?? "az",
+  here: null, // { lat, lng } once the visitor shares their location; never sent anywhere
+  sheetSort: "near", // branch list order once `here` is known: "near" or "az"
 };
 
 const reportedToday = (m) => m.lastReportedDate === state.today;
@@ -142,7 +153,20 @@ async function init() {
     });
   }
   window.addEventListener("popstate", () => show(urlMarket()));
-  show(urlMarket());
+
+  let id = urlMarket();
+  if (!id && store.get("rbz.near") === "1") {
+    // Turned "near me" on before: open on the nearest branch, unless a link named one.
+    setFresh("Finding your nearest branch…");
+    const near = await nearestOnReturn();
+    if (near) {
+      id = String(near.id);
+      const url = new URL(location.href);
+      url.searchParams.set("market", id);
+      history.replaceState(null, "", url);
+    }
+  }
+  show(id);
 }
 
 function urlMarket() {
@@ -187,6 +211,8 @@ async function showAll() {
   document.title = "Rythu Bazar rates today";
   setFresh("Loading rates…");
   resetView();
+  renderNearLine(null);
+  renderNearAsk();
 
   let data;
   try {
@@ -215,17 +241,17 @@ async function showAll() {
     missing: data.missing ?? [],
   };
   if (!data.items.length) {
-    setFresh(`No bazar has posted rates yet${checked}`, true);
+    setFresh(`No branch has posted rates yet${checked}`, true);
     els.notice.replaceChildren(
       el(
         "div",
         { className: "card notice" },
         el("h2", { textContent: "No rates yet" }),
-        el("p", { textContent: "Bazars usually post rates by 1 PM. This page fills in on its own as they do." }),
+        el("p", { textContent: "Branches usually post rates by 1 PM. This page fills in on its own as they do." }),
       ),
     );
   } else {
-    setFresh(`${data.reportedToday} of ${data.markets} bazars reported today${checked}`, data.reportedToday === 0);
+    setFresh(`${data.reportedToday} of ${data.markets} branches reported today${checked}`, data.reportedToday === 0);
   }
   els.controls.hidden = !data.items.length;
   renderBoard();
@@ -245,13 +271,15 @@ async function showMarket(id) {
   els.sub.textContent = m?.district ?? "";
   setFresh("Loading rates…");
   resetView();
+  els.nearAsk.hidden = true;
+  renderNearLine(m);
 
   let data;
   try {
     data = await api(`/api/prices?market=${encodeURIComponent(id)}`);
   } catch {
     state.current = null;
-    setFresh("Couldn't load rates for this bazar. Try again in a bit.", true);
+    setFresh("Couldn't load rates for this branch. Try again in a bit.", true);
     return;
   }
   if (String(state.market?.id) !== id) return; // navigated away meanwhile
@@ -264,12 +292,13 @@ async function showMarket(id) {
   els.sub.textContent = `${market.district}${items.length ? ` · ${plural(items.length, "item")}` : ""}`;
 
   if (!date || !items.length) {
-    setFresh(`No rates yet today${checked}`, true);
+    setFresh(`No rates in ${daysBetween(TRACKING_START, state.today)}+ days${checked}`, true);
     els.notice.replaceChildren(notReported(market));
   } else if (isToday) {
     setFresh(`Today's rates${checked}`);
   } else {
-    setFresh(`Not updated today · showing ${fmtDate(date)}${checked}`, true);
+    const days = daysBetween(date, state.today);
+    setFresh(`${days === 1 ? "Not updated today" : `Not updated in ${days} days`} · showing ${fmtDate(date)}${checked}`, true);
     els.notice.replaceChildren(
       el(
         "div",
@@ -287,25 +316,27 @@ async function showMarket(id) {
 
 function notReported(market) {
   const today = state.all.filter((m) => reportedToday(m) && m.id !== market.id);
-  const near = today.filter((m) => m.district === market.district);
-  const picks = (near.length ? near : today).slice(0, 3);
+  // Nearest to the visitor if we know where they are, else to this branch, else same district.
+  const self = state.all.find((m) => m.id === market.id);
+  const from = state.here ?? (self && located(self) ? self : null);
+  const near = from ? [] : today.filter((m) => m.district === market.district);
+  const picks = (from ? byDistance(today, from) : near.length ? near : today).slice(0, 3);
   return el(
     "div",
     {},
     el(
       "div",
       { className: "card notice" },
-      el("h2", { textContent: "Not published yet" }),
+      el("h2", { textContent: "No rates from this branch yet" }),
       el("p", {
-        textContent:
-          "Bazars usually post rates by 1 PM. We check again every 30 minutes, so this page fills in on its own.",
+        textContent: `It hasn't posted rates since we started checking on ${fmtDate(TRACKING_START)}. We check every 30 minutes, so this page fills in on its own if it does.`,
       }),
     ),
     picks.length
       ? el(
           "div",
           { className: "nearby" },
-          el("h3", { textContent: near.length ? "Nearby with today's rates" : "Bazars with today's rates" }),
+          el("h3", { textContent: from || near.length ? "Nearest with today's rates" : "Branches with today's rates" }),
           ...picks.map((m) =>
             el(
               "button",
@@ -314,7 +345,10 @@ function notReported(market) {
                 "span",
                 { className: "what" },
                 el("span", { className: "en", textContent: m.name }),
-                el("span", { className: "sub", textContent: `${m.district} · ${plural(m.itemCount, "item")}` }),
+                el("span", {
+                  className: "sub",
+                  textContent: `${m.district} · ${plural(m.itemCount, "item")}${state.here ? ` · ~${kmText(m.km)}` : ""}`,
+                }),
               ),
               el("span", { className: "pill", textContent: "Open" }),
             ),
@@ -332,7 +366,7 @@ const comparable = (i) => i.stats && i.stats.markets > 1 && !UNIT_VARIES.has(i.i
 function verdict(i) {
   const s = i.stats;
   if (!comparable(i)) return null;
-  const n = `${s.markets} bazars`;
+  const n = `${s.markets} branches`;
   if (s.min === s.max) return { tone: "plain", text: `Same price at all ${n}` };
   if (!state.market) {
     const c = i.cheapest ?? [];
@@ -379,7 +413,7 @@ function renderBoard() {
     const priceText = priceLabel(i);
     let note = "per kg";
     if (s && s.markets > 1) {
-      if (!state.market) note = `per kg · ${s.markets} bazars`;
+      if (!state.market) note = `per kg · ${s.markets} branches`;
       else {
         const v = verdict(i);
         note = `${v?.tone === "good" ? "low" : v?.tone === "bad" ? "high" : "typical"} · ${rupees(s.min)}–${money(s.max)}`;
@@ -392,9 +426,9 @@ function renderBoard() {
         className: "staple",
         onclick: () => openCompare(i),
         ariaLabel: [
-          `${label} ${priceText} per kg${state.market ? "" : " across bazars"}`,
+          `${label} ${priceText} per kg${state.market ? "" : " across branches"}`,
           move ? `${moveWords(move)}, ${Math.abs(move.pct)}%` : "",
-          "Compare bazars",
+          "Compare branches",
         ]
           .filter(Boolean)
           .join(". "),
@@ -444,7 +478,7 @@ function row(i, move) {
   const s = i.stats;
   const rare = !state.market && s && s.markets < RARE;
   const v = rare
-    ? { tone: "plain", text: s.markets === 1 ? `Only at ${place(i.cheapest?.[0] ?? "one bazar")}` : `Only ${s.markets} bazars report this` }
+    ? { tone: "plain", text: s.markets === 1 ? `Only at ${place(i.cheapest?.[0] ?? "one branch")}` : `Only ${s.markets} branches report this` }
     : verdict(i);
   const unitVaries = UNIT_VARIES.has(i.item);
   // All bazars: the range is the headline, so the strip only earns its place inside one bazar.
@@ -457,10 +491,10 @@ function row(i, move) {
 
   const label = [
     en,
-    `${priceText}${unitVaries ? "" : " per kg"}${state.market ? "" : " across bazars"}`,
+    `${priceText}${unitVaries ? "" : " per kg"}${state.market ? "" : " across branches"}`,
     change ? `${moveWords(change)} since the day before` : "",
     v?.text,
-    "Compare bazars",
+    "Compare branches",
   ]
     .filter(Boolean)
     .join(". ");
@@ -477,7 +511,7 @@ function row(i, move) {
         el("span", { className: "en", textContent: en }),
         te ? el("span", { className: "te", textContent: te }) : null,
         v ? el("span", { className: `badge ${v.tone}`, textContent: v.text }) : null,
-        unitVaries ? el("span", { className: "badge plain", textContent: "Per piece or bunch at some bazars" }) : null,
+        unitVaries ? el("span", { className: "badge plain", textContent: "Per piece or bunch at some branches" }) : null,
       ),
       el(
         "span",
@@ -529,9 +563,9 @@ function lastSeenRow(m) {
   }
   lastSeen.get(m.item).then((day) => {
     if (day === undefined) badge.textContent = "Couldn't look up its last price.";
-    else if (!day) badge.textContent = "No bazar has reported this yet.";
+    else if (!day) badge.textContent = "No branch has reported this yet.";
     else {
-      badge.textContent = `Last reported ${fmtDate(day.date)} · ${plural(day.markets, "bazar")}`;
+      badge.textContent = `Last reported ${fmtDate(day.date)} · ${plural(day.markets, "branch", "branches")}`;
       const text = day.min === day.max ? rupees(day.median) : `${rupees(day.min)}–${money(day.max)}`;
       cost.replaceChildren(
         el("span", { className: `num${text.length > 5 ? " small" : ""}` }, text, el("span", { className: "unit", textContent: "/kg" })),
@@ -598,7 +632,7 @@ async function openCompare(i) {
   const { en, te } = info(i.item);
   els.cmpTitle.textContent = en;
   els.cmpTe.textContent = te;
-  els.cmpBody.replaceChildren(el("p", { className: "sheet-msg", textContent: "Comparing bazars…" }));
+  els.cmpBody.replaceChildren(el("p", { className: "sheet-msg", textContent: "Comparing branches…" }));
   els.compare.showModal();
   let data;
   // The chart is extra: if history fails, the comparison still shows.
@@ -613,7 +647,7 @@ async function openCompare(i) {
   const list = data.markets;
   if (list.length < 2) {
     els.cmpBody.replaceChildren(
-      el("p", { className: "sheet-msg", textContent: "No other bazar has reported this item in the last three days." }),
+      el("p", { className: "sheet-msg", textContent: "No other branch has reported this item in the last three days." }),
     );
     return;
   }
@@ -621,10 +655,10 @@ async function openCompare(i) {
   const max = list[list.length - 1].price;
   const cheapest = list.filter((m) => m.price === min);
   const unitVaries = UNIT_VARIES.has(i.item);
-  const where = cheapest.length === 1 ? `${cheapest[0].market} at ${rupees(min)}` : `${plural(cheapest.length, "bazar")} at ${rupees(min)}`;
+  const where = cheapest.length === 1 ? `${cheapest[0].market} at ${rupees(min)}` : `${plural(cheapest.length, "branch", "branches")} at ${rupees(min)}`;
   let summary;
-  if (unitVaries) summary = `Bazars sell this by different units, so these rates don't compare directly.`;
-  else if (!here) summary = `${rupees(min)} to ${rupees(max)}/kg across bazars. Cheapest is ${where}.`;
+  if (unitVaries) summary = `Branches sell this by different units, so these rates don't compare directly.`;
+  else if (!here) summary = `${rupees(min)} to ${rupees(max)}/kg across branches. Cheapest is ${where}.`;
   else if (cheapest.some((m) => m.marketId === here.id)) summary = `${here.name} is among the cheapest at ${rupees(i.price)}.`;
   else {
     const v = verdict(i);
@@ -639,7 +673,7 @@ async function openCompare(i) {
       el(
         "div",
         { className: "tags" },
-        el("span", { textContent: `${plural(list.length, "bazar")}, last 3 days` }),
+        el("span", { textContent: `${plural(list.length, "branch", "branches")}, last 3 days` }),
         el("span", { textContent: `${rupees(min)} – ${rupees(max)}` }),
         unitVaries ? el("span", { className: "warn", textContent: "Units differ: per kg, piece or bunch" }) : null,
       ),
@@ -647,7 +681,7 @@ async function openCompare(i) {
     unitVaries ? null : priceChart((await history)?.days ?? [], en),
     el(
       "ol",
-      { className: "cmp-list", ariaLabel: "Bazars, cheapest first. Tap one to see all its prices" },
+      { className: "cmp-list", ariaLabel: "Branches, cheapest first. Tap one to see all its prices" },
       ...list.map((m) => {
         const isHere = m.marketId === here?.id;
         const isCheapest = m.price === min && !unitVaries;
@@ -680,7 +714,7 @@ async function openCompare(i) {
               "span",
               { className: "val" },
               el("span", { className: "num", textContent: rupees(m.price) }),
-              el("small", { textContent: isHere ? "This bazar" : isCheapest ? "Cheapest" : "" }),
+              el("small", { textContent: isHere ? "This branch" : isCheapest ? "Cheapest" : "" }),
             ),
             chevron(),
           ),
@@ -760,7 +794,7 @@ function priceChart(days, name) {
         "div",
         { className: "chart-key", ariaHidden: "true" },
         el("span", {}, el("i", { className: "k-line" }), "Typical price"),
-        el("span", {}, el("i", { className: "k-band" }), "Lowest to highest bazar"),
+        el("span", {}, el("i", { className: "k-band" }), "Lowest to highest branch"),
       ),
     );
   };
@@ -799,7 +833,9 @@ function renderMarkets() {
     els.markets.close();
     if (String(id ?? "") !== String(currentId ?? "")) go(id == null ? null : String(id));
   };
-  const btn = (m, isLater) =>
+  const nearFirst = state.here && state.sheetSort === "near";
+  renderSheetNear();
+  const btn = (m, isLater, meta) =>
     el(
       "li",
       {},
@@ -818,16 +854,31 @@ function renderMarkets() {
           el("span", { className: "en", textContent: m.name }),
           el("span", { className: "sub", textContent: m.district }),
         ),
-        el("span", {
-          className: "meta",
-          textContent: isLater
-            ? m.lastReportedDate
-              ? `last ${fmtDate(m.lastReportedDate)}`
-              : "no rates yet"
-            : plural(m.itemCount, "item"),
-        }),
+        meta ??
+          el("span", {
+            className: "meta",
+            textContent: isLater
+              ? m.lastReportedDate
+                ? `last ${fmtDate(m.lastReportedDate)}`
+                : "no rates yet"
+              : plural(m.itemCount, "item"),
+          }),
       ),
     );
+  // Nearest first: distance plus how fresh each branch's rates are; unplaced branches go last.
+  const distBtn = (m) => {
+    const a = age(m);
+    return btn(
+      m,
+      false,
+      el(
+        "span",
+        { className: "dist" },
+        m.km != null ? el("b", { className: "num", textContent: `~${kmText(m.km)}` }) : null,
+        el("span", { className: `tag ${a.tone}`, textContent: a.text }),
+      ),
+    );
+  };
 
   const allBtn = el(
     "ul",
@@ -853,12 +904,212 @@ function renderMarkets() {
     ...(hits.length
       ? [
           q ? null : allBtn,
-          today.length ? el("h3", { className: "sheet-section", textContent: `Reporting today · ${today.length}` }) : null,
-          today.length ? el("ul", { className: "mk-list" }, ...today.map((m) => btn(m, false))) : null,
-          later.length ? el("h3", { className: "sheet-section muted", textContent: `Not reported today · ${later.length}` }) : null,
-          later.length ? el("ul", { className: "mk-list" }, ...later.map((m) => btn(m, true))) : null,
+          nearFirst
+            ? el("ul", { className: "mk-list" }, ...[...byDistance(hits), ...hits.filter((m) => !located(m))].map(distBtn))
+            : null,
+          nearFirst ? null : today.length ? el("h3", { className: "sheet-section", textContent: `Reporting today · ${today.length}` }) : null,
+          nearFirst ? null : today.length ? el("ul", { className: "mk-list" }, ...today.map((m) => btn(m, false))) : null,
+          nearFirst ? null : later.length ? el("h3", { className: "sheet-section muted", textContent: `Not reported today · ${later.length}` }) : null,
+          nearFirst ? null : later.length ? el("ul", { className: "mk-list" }, ...later.map((m) => btn(m, true))) : null,
         ].filter(Boolean)
-      : [el("p", { className: "sheet-msg", textContent: `No bazar matches “${els.mkSearch.value.trim()}”.` })]),
+      : [el("p", { className: "sheet-msg", textContent: `No branch matches “${els.mkSearch.value.trim()}”.` })]),
+  );
+}
+
+// ---------- Near me ----------
+// Distances are worked out here in the browser: the visitor's location never leaves the phone.
+// Stored on the phone only: that "near me" is on (rbz.near) and when the home invite was
+// dismissed (rbz.nearSkip). Distances are straight-line, so they're shown as approximate, with
+// a Directions link to Google Maps for the road route.
+
+const TRACKING_START = "2026-10-07"; // first day of scraped rates: "no rates in N+ days" counts from here
+const SKIP_DAYS = 30; // "Not now" hides the home invite this long
+const DAY_MS = 864e5;
+
+const canLocate = "geolocation" in navigator;
+const located = (m) => m.lat != null && m.lng != null;
+const daysBetween = (from, to) => Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / DAY_MS);
+const kmText = (d) => `${d < 10 ? d.toFixed(1) : Math.round(d)} km`;
+
+function km(a, b) {
+  const rad = Math.PI / 180;
+  const h =
+    Math.sin(((b.lat - a.lat) * rad) / 2) ** 2 +
+    Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(((b.lng - a.lng) * rad) / 2) ** 2;
+  return 12742 * Math.asin(Math.sqrt(h));
+}
+
+/** Placed branches nearest first, each with .km from `from`. */
+function byDistance(list = state.all, from = state.here) {
+  return list
+    .filter(located)
+    .map((m) => ({ ...m, km: km(from, m) }))
+    .sort((a, b) => a.km - b.km);
+}
+
+/** How fresh a branch's rates are: a tag for lists, and words for a sentence. */
+function age(m) {
+  if (!m.lastReportedDate) {
+    const text = `No rates in ${daysBetween(TRACKING_START, state.today)}+ days`;
+    return { text, words: text.toLowerCase(), tone: "old" };
+  }
+  const n = daysBetween(m.lastReportedDate, state.today);
+  if (n <= 0) return { text: "Today", words: "today's rates", tone: "today" };
+  if (n === 1) return { text: "Yesterday", words: "updated yesterday", tone: "recent" };
+  return { text: `${n} days ago`, words: `updated ${n} days ago`, tone: "old" };
+}
+
+function locate(timeout = 10000) {
+  return new Promise((resolve, reject) =>
+    navigator.geolocation.getCurrentPosition(
+      (p) => {
+        state.here = { lat: p.coords.latitude, lng: p.coords.longitude };
+        store.set("rbz.near", "1");
+        resolve(state.here);
+      },
+      (err) => {
+        if (err.code === err.PERMISSION_DENIED) store.remove("rbz.near");
+        reject(err);
+      },
+      { enableHighAccuracy: false, timeout, maximumAge: 10 * 60 * 1000 },
+    ),
+  );
+}
+
+/** A returning "near me" visitor's nearest branch, if the browser still allows location without asking. */
+async function nearestOnReturn() {
+  if (!canLocate) return null;
+  try {
+    const perm = await navigator.permissions?.query({ name: "geolocation" });
+    if (perm?.state !== "granted") {
+      if (perm?.state === "denied") store.remove("rbz.near");
+      return null; // never pop a permission prompt the visitor didn't tap for
+    }
+    await locate(5000);
+  } catch {
+    return null;
+  }
+  return byDistance()[0] ?? null;
+}
+
+/** Runs a "Use my location" tap: busy label, then `then()`, or an explanation in `msg`. */
+async function useLocation(btn, label, msg, then) {
+  const text = label.textContent;
+  btn.disabled = true;
+  label.textContent = "Finding you…";
+  try {
+    await locate();
+    then();
+  } catch (err) {
+    msg.textContent =
+      err?.code === 1
+        ? "Location is blocked for this site. Allow it in your browser settings, or choose a branch."
+        : "Couldn't find your location. Try again.";
+    label.textContent = err?.code === 1 ? text : "Try again";
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+const pinIcon = () => svg("svg", { viewBox: "0 0 24 24", "aria-hidden": "true", class: "pin" }, svg("path", { d: "M3 11l18-8-8 18-2-8z" }));
+
+/** Home: a one-line invite to find the nearest branch, or, once location is on, a link to it. */
+function renderNearAsk() {
+  const box = els.nearAsk;
+  box.hidden = true;
+  if (!canLocate || !state.all.some(located)) return;
+  if (state.here) {
+    const [m] = byDistance();
+    box.replaceChildren(
+      el(
+        "div",
+        { className: "wrap" },
+        el(
+          "button",
+          { type: "button", className: "near-go", onclick: () => go(String(m.id)) },
+          pinIcon(),
+          el(
+            "span",
+            { className: "what" },
+            el("span", { textContent: `Nearest branch: ${m.name}` }),
+            el("small", { textContent: `About ${kmText(m.km)} away · ${age(m).words}` }),
+          ),
+          chevron(),
+        ),
+      ),
+    );
+  } else {
+    if (Date.now() - Number(store.get("rbz.nearSkip") ?? 0) < SKIP_DAYS * DAY_MS) return;
+    const msg = el("span", { className: "what", textContent: "Your nearest branch" });
+    const btn = el("button", { type: "button", className: "btn-sun", textContent: "Use my location" });
+    btn.onclick = () => useLocation(btn, btn, msg, () => go(String(byDistance()[0].id)));
+    const skip = () => {
+      store.set("rbz.nearSkip", String(Date.now()));
+      box.hidden = true;
+    };
+    box.replaceChildren(
+      el(
+        "div",
+        { className: "wrap near-ask-inner" },
+        pinIcon(),
+        msg,
+        btn,
+        el(
+          "button",
+          { type: "button", className: "icon-btn bare", ariaLabel: "Not now", onclick: skip },
+          svg("svg", { viewBox: "0 0 24 24", "aria-hidden": "true" }, svg("path", { d: "M6 6l12 12M18 6L6 18" })),
+        ),
+      ),
+    );
+  }
+  box.hidden = false;
+}
+
+/** One branch: its distance from the visitor (if known) and a Directions link to Google Maps. */
+function renderNearLine(m) {
+  els.nearLine.hidden = els.directions.hidden = true;
+  if (!m || !located(m)) return;
+  els.directions.href = `https://www.google.com/maps/dir/?api=1&destination=${m.lat},${m.lng}`;
+  els.directions.hidden = false;
+  if (!state.here) return;
+  const d = kmText(km(state.here, m));
+  els.nearLine.replaceChildren(pinIcon(), byDistance()[0]?.id === m.id ? `Nearest to you · about ${d}` : `About ${d} from you`);
+  els.nearLine.hidden = false;
+}
+
+/** Branch list: "Use my location" until we know where the visitor is, then the sort toggle. */
+function renderSheetNear() {
+  const box = els.mkNear;
+  box.hidden = !canLocate || !state.all.some(located);
+  if (box.hidden) return;
+  if (!state.here) {
+    const label = el("b", { textContent: "Use my location" });
+    const msg = el("small", { textContent: "Sort branches by distance. Your location stays on this phone." });
+    const btn = el("button", { type: "button", className: "near-btn" }, pinIcon(), el("span", { className: "what" }, label, msg));
+    btn.onclick = () =>
+      useLocation(btn, label, msg, () => {
+        state.sheetSort = "near";
+        renderMarkets();
+      });
+    box.replaceChildren(btn);
+    return;
+  }
+  const near = state.sheetSort === "near";
+  box.replaceChildren(
+    el(
+      "div",
+      { className: "near-sort" },
+      el("span", {}, pinIcon(), near ? "Nearest first" : "A–Z", near ? el("small", { textContent: "· approx. distance" }) : null),
+      el("button", {
+        type: "button",
+        className: "link-btn",
+        textContent: near ? "Sort A–Z instead" : "Nearest first",
+        onclick: () => {
+          state.sheetSort = near ? "az" : "near";
+          renderMarkets();
+        },
+      }),
+    ),
   );
 }
 

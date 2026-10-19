@@ -42,8 +42,12 @@
           <button type="button" class="back-btn" id="back" hidden>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>All branches
           </button>
+          <p class="near-line" id="near-line" hidden></p>
           <h1 class="market-name" id="title">Today's rates</h1>
           <p class="market-sub" id="sub">Price ranges across Telangana's Rythu Bazars</p>
+          <a class="directions" id="directions" target="_blank" rel="noopener" hidden
+            >Directions<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8" /></svg
+          ></a>
         </div>
 
         <p class="fresh" id="fresh" role="status" aria-live="polite"></p>
@@ -52,6 +56,9 @@
         <div class="board" id="board" hidden></div>
       </div>
     </header>
+
+    <!-- "Near me" on the home view: an invite, or a link to the nearest branch (app.js). -->
+    <div class="near-ask" id="near-ask" hidden></div>
 
     <div class="controls" id="controls" hidden>
       <div class="wrap controls-inner">
@@ -79,19 +86,19 @@
 
     <footer class="wrap foot">
       <p>
-        <strong>Ranges:</strong> on the all-branches view each price runs from the lowest to the highest rate across bazars that
+        <strong>Ranges:</strong> on the all-branches view each price runs from the lowest to the highest rate across branches that
         reported in the last three days. The small line under it is the typical price over the last week, and an arrow shows
-        the change since the day before (no arrow: no change). When you're viewing one bazar, the strip shows the same range:
-        the square is this bazar's rate and the tick is the typical (middle) rate.
+        the change since the day before (no arrow: no change). When you're viewing one branch, the strip shows the same range:
+        the square is this branch's rate and the tick is the typical (middle) rate.
       </p>
       <p>
         <strong>Biggest price moves:</strong> the three items whose rate changed most from one day to the next, by percentage.
-        Across all branches it's the typical bazar's change; inside a bazar, that bazar's own.
+        Across all branches it's the typical branch's change; inside a branch, that branch's own.
       </p>
       <p>
         Rates as published by the Telangana Agricultural Marketing Department's Rythu Bazar Information System, in ₹ per kg.
-        A few items such as drumsticks and leafy greens are sold per piece or bunch, and bazars don't say which, so those
-        aren't compared. Bazars report through the morning, usually by 1 PM.
+        A few items such as drumsticks and leafy greens are sold per piece or bunch, and branches don't say which, so those
+        aren't compared. Branches report through the morning, usually by 1 PM.
       </p>
     </footer>
 
@@ -117,11 +124,12 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
         </button>
       </div>
+      <div class="sheet-near" id="mk-near" hidden></div>
       <div class="sheet-search">
         <label class="search">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
-          <span class="sr">Search bazars</span>
-          <input id="mk-search" type="search" placeholder="Search bazars or districts" autocomplete="off" />
+          <span class="sr">Search branches</span>
+          <input id="mk-search" type="search" placeholder="Search branches or districts" autocomplete="off" />
         </label>
       </div>
       <div class="sheet-body" id="mk-body"></div>
