@@ -2,7 +2,7 @@
 
 Today's vegetable rates at Telangana Rythu Bazars, in one place. It runs entirely on Cloudflare's free plan.
 
-**Live:** https://rythu-bazar.sunnyhaladker.workers.dev
+**Live:** https://rythu.sunnyhaladker.my (the workers.dev address 302s there)
 
 - **Source:** Telangana Rythu Bazar Information System (`183.82.5.184/rbzts`), run by the Agricultural Marketing Dept. Each bazar's staff enter that day's rates by about 1 PM. There's no API, so we scrape it. See [RESEARCH.md](RESEARCH.md).
 - **Stack:** one Cloudflare Worker. It serves the static site (`public/`), the JSON API (`src/api.ts`) and the scraper (cron, `src/scraper/`), and stores everything in **D1** (SQLite).
@@ -125,7 +125,7 @@ It's safe to empty the table at any time.
 - Branches that have never posted, and vegetables nobody posted in 3 days, are `noindex` and left out of the sitemap.
 - A page view reads 1–2 D1 rows: `overview` + `markets` (home), `markets` + `prices:<id>` (branch), `item:<key>` (vegetable). All rebuild as described under snapshots.
 - "Updated" = when the rates last appeared or changed (`prices.updated_at`). The server writes the IST time; `app.js` turns it into "40 mins ago".
-- Domain: `SITE_ORIGIN` in `wrangler.jsonc`. Empty = each request's own host. Once the real domain is set there, canonical links and the sitemap use it, and pages asked for on workers.dev 301 to it. Submit the sitemap to Search Console / Bing only after that.
+- Domain: `SITE_ORIGIN` in `wrangler.jsonc` (now `https://rythu.sunnyhaladker.my`, attached via `routes` with `workers_dev: true` kept on). Canonical links and the sitemap use it, and pages asked for on any other host 302 to it (302 because the address may still move to an own domain). Empty = each request's own host.
 
 ## Near me
 

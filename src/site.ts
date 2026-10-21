@@ -48,7 +48,7 @@ export interface SiteEnv extends ApiEnv {
 
 const HTML_HEADERS = { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=60" };
 const htmlResponse = (body: string, status = 200) => new Response(body, { status, headers: HTML_HEADERS });
-const redirect = (to: string) => new Response(null, { status: 301, headers: { Location: to } });
+const redirect = (to: string, status = 301) => new Response(null, { status, headers: { Location: to } });
 
 const markets = async (env: SiteEnv) => flatMarkets(JSON.parse(await marketsBody(env)) as Markets);
 const overview = async (env: SiteEnv) => JSON.parse(await overviewBody(env)) as Overview;
@@ -66,7 +66,8 @@ export async function handleSite(req: Request, env: SiteEnv, url: URL): Promise<
   if (!isPage) return null;
 
   const origin = env.SITE_ORIGIN?.replace(/\/$/, "") || url.origin;
-  if (origin !== url.origin && !isLocal(url)) return redirect(origin + path + url.search);
+  // 302, not 301: browsers keep a 301 forever, and the public address may still change (own domain).
+  if (origin !== url.origin && !isLocal(url)) return redirect(origin + path + url.search, 302);
   const ctx: Ctx = { origin };
   // One URL per page: no trailing slash, lower case.
   if (route && (path.endsWith("/") || path !== path.toLowerCase())) {

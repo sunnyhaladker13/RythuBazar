@@ -5,6 +5,11 @@
   "compatibility_date": "2026-10-01",
   "observability": { "enabled": true },
 
+  // Public address. Wrangler creates the DNS record in the sunnyhaladker.my zone. workers.dev stays
+  // on so links already shared there keep working (they redirect once SITE_ORIGIN is set).
+  "routes": [{ "pattern": "rythu.sunnyhaladker.my", "custom_domain": true }],
+  "workers_dev": true,
+
   // public/ holds the static files (styles, script, share image). The Worker renders every page
   // (src/site.ts) and answers /api/*; anything else that isn't a file gets its 404 page.
   "assets": {
@@ -43,9 +48,9 @@
     "RECHECK_INTERVAL_MIN": "180",
     // Re-read each district's market list (and empty districts) this often.
     "DISCOVERY_INTERVAL_MIN": "1440",
-    // The site's public address for canonical links and the sitemap, e.g. "https://rythubazarrates.in".
-    // Once set, pages asked for on any other host (workers.dev) 301 there. Empty: each request's own host.
-    "SITE_ORIGIN": ""
+    // The site's public address for canonical links and the sitemap. Pages asked for on any other
+    // host (workers.dev) 302 there. Empty: each request's own host.
+    "SITE_ORIGIN": "https://rythu.sunnyhaladker.my"
   }
   // Optional secret enabling POST /api/admin/scrape: `npx wrangler secret put ADMIN_TOKEN`
 }

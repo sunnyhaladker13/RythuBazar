@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ITEMS, baseItem, itemBySlug, itemSlug, pathForItem } from "../src/items";
 import { chartRanges, changeText, esc, html, vegetablePage, type VegData } from "../src/pages";
 import { dayWord, istTime, slugify } from "../src/format";
+import { handleSite, type SiteEnv } from "../src/site";
 
 describe("vegetable slugs", () => {
   it("drops the bracket and is unique", () => {
@@ -122,5 +123,27 @@ describe("vegetable page", () => {
     const page = vegetablePage({ origin: "" }, data([row(1, "<b>X</b>", 23)]));
     expect(page).not.toContain("<b>X</b>");
     expect(page).toContain("&lt;b&gt;X&lt;/b&gt;");
+  });
+});
+
+describe("public address", () => {
+  const env = { SITE_ORIGIN: "https://rythu.sunnyhaladker.my" } as SiteEnv;
+  const get = (u: string) => handleSite(new Request(u), env, new URL(u));
+
+  it("sends other hosts to SITE_ORIGIN with a temporary redirect", async () => {
+    const res = await get("https://rythu-bazar.sunnyhaladker.workers.dev/vegetables/tomato?x=1");
+    expect(res?.status).toBe(302);
+    expect(res?.headers.get("Location")).toBe("https://rythu.sunnyhaladker.my/vegetables/tomato?x=1");
+  });
+
+  it("leaves static files and the API alone", async () => {
+    expect(await get("https://rythu-bazar.sunnyhaladker.workers.dev/api/overview")).toBeNull();
+    expect(await get("https://rythu-bazar.sunnyhaladker.workers.dev/app.js")).toBeNull();
+  });
+
+  it("still tidies URLs on the public host with a permanent redirect", async () => {
+    const res = await get("https://rythu.sunnyhaladker.my/Vegetables/Tomato/");
+    expect(res?.status).toBe(301);
+    expect(res?.headers.get("Location")).toBe("/vegetables/tomato");
   });
 });
