@@ -168,8 +168,7 @@ function footer(long: boolean): Html {
     }
     <p class="foot-nav"><a href="/vegetables">All vegetables</a> · <a href="/branches">All branches</a></p>
     <p class="credit">
-      Built by <a href="https://www.sunnyhaladker.my" target="_blank" rel="noopener">Sunny</a> at
-      <a href="https://rippledesign.co" target="_blank" rel="noopener">Ripple Design</a>
+      Built by <a href="https://www.sunnyhaladker.my" target="_blank" rel="noopener">Sunny</a>
     </p>
   </footer>`;
 }
